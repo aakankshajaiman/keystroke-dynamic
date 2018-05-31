@@ -1,0 +1,2685 @@
+---
+title: "STAT-702 Final (Group DS-1)"
+author: Miranda Morgan <Miranda.Morgan@trojans.dsu.edu>, Krishna Harsha Kosuri <KrishnaHarsha.Kosuri@trojans.dsu.edu>,
+  Aakanksha Jaiman <Aakanksha.Jaiman@trojans.dsu.edu>, Jennifer Schulte <Jennifer.Schulte@dsu.edu>
+date: "4/29/2018"
+output:
+  word_document:
+    reference_docx: word-style-reference.docx
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+# Libraries required for the project
+library("gbm")
+library("gam")
+library("leaps")
+library("MASS")
+library("knitr")
+library("mboost")
+library("pander")
+library("caret")
+library("e1071")
+library("nnet")
+library("fmsb")
+library("randomForest")
+library("ggbiplot")
+library("ggplot2")
+library("plyr")
+library("dplyr")
+library("knitr")
+library("gridExtra")
+library("rpart")
+library("party")
+library("partykit")
+library("mclust")
+library("grid")
+```
+
+## Introduction
+
+### About the Data
+
+This is a KeyStroke Dynamics dataset with a group of 51 Individuals who have access to a passcode for a specific system. There are 34 columns in the dataset each describing the typing interval to type in the passcode: .tie5Roanl.
+
+### Key Goal of the Paper
+
+Using the Known dataset we are going to evaluate the dataset. This will be done by using 16 classification models to find the best performance, and use this to predict the users in unknown and the questioned dataset.
+
+```{r, include=FALSE, warning=FALSE, message=FALSE}
+#Read in the text file
+#Specify that there are headings in the file
+#Make sure to put where your file is saved otherwise this will not run
+#known_mm <- read.table("/Users/v-aajaim/Downloads/known.csv", head=TRUE, sep=",")
+#unknown_mm <- read.table("/Users/mirandamorgan/desktop/Final_Stat702/unknown.csv", head=TRUE, sep=",")
+
+#compilation purposes
+known_mm <- read.table("C:/Users/jlschulte14446/Dropbox/Spring2018/STAT702/STAT702/Final/known.csv", head=TRUE, sep=",")
+unknown_mm <- read.table("C:/Users/jlschulte14446/Dropbox/Spring2018/STAT702/STAT702/Final/unknown.csv", head=TRUE, sep=",")
+
+known_mm<- known_mm[,-1]
+```
+
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+# Read known_aj csv file
+#datafile <- "/Users/v-aajaim/Downloads/known.csv"
+#known_aj <- read.csv(datafile)
+
+#compilation purposes
+datafile <- "C:/Users/jlschulte14446/Dropbox/Spring2018/STAT702/STAT702/Final/known.csv"
+known_aj <- read.csv(datafile)
+
+# remove first column as it is just an index column
+known_aj<- known_aj[,-1]
+```
+
+
+```{r,message=F,warning=F,highlight=FALSE, include=FALSE, comment=NA, error=FALSE}
+#known_kk <- read.table("/Users/kkosuri/Downloads/STAT-702/known.csv", head=TRUE, sep=",")
+
+#compilation purposes
+known_kk <- read.table("C:/Users/jlschulte14446/Dropbox/Spring2018/STAT702/STAT702/Final/known.csv", head=TRUE, sep=",")
+
+#Take e^(x) as a transformation of H.five
+known_kk$exp_H.five <- exp(known_kk$H.five)
+
+#Add the transformation of squaring DD.i.e
+known_kk$squared_DD.l.Return <- (known_kk$DD.l.Return)^2
+
+#Add the interaction between H.period and H.o
+known_kk$interaction.H.period.o <- (known_kk$H.period)*(known_kk$H.o)
+
+
+#Add the interaction between H.e and H.t
+known_kk$interaction.H.e.t <- (known_kk$H.e)*(known_kk$H.t)
+
+#Add the interaction between H.i and H.o
+known_kk$interaction.H.i.o <- (known_kk$H.i)*(known_kk$H.o)
+
+#Add the interaction between H.e and H.t
+known_kk$interaction.H.shiftr.t <- (known_kk$H.Shift.r)*(known_kk$H.t)
+
+#Add the transformation of squaring H.period
+known_kk$squared_H.period <- (known_kk$H.period)^2
+
+#Add the transformation of squaring DD.i.e
+known_kk$squared_DD.i.e <- (known_kk$DD.i.e)^2
+```
+
+
+```{r,message=F,warning=F,highlight=FALSE, include=FALSE, comment=NA, error=FALSE}
+known_js <- read.table("C:/Users/jlschulte14446/Dropbox/Spring2018/STAT702/STAT702/Final/known.csv", head=TRUE, sep=",")
+
+known_js <- known_js[,-1]
+
+#head(known_js)
+
+unknown_js <- read.table("C:/Users/jlschulte14446/Dropbox/Spring2018/STAT702/STAT702/Final/unknown.csv", head=TRUE, sep=",")
+
+#head(unknown_js)
+
+#summary(known_js)
+
+#exploration
+str(known_js)
+
+summary(known_js)
+
+
+#transformations from Miranda
+#Take e^(x) as a transformation of H.five
+known_js$exp_H.five <- exp(known_js$H.five)
+
+#Add the transformation of squaring DD.i.e
+known_js$squared_DD.l.Return <- (known_js$DD.l.Return)^2
+
+#Add the interaction between H.period and H.o
+known_js$interaction.H.period.o <- (known_js$H.period)*(known_js$H.o)
+
+#Add the interaction between H.e and H.t
+known_js$interaction.H.e.t <- (known_js$H.e)*(known_js$H.t)
+
+#Add the interaction between H.i and H.o
+known_js$interaction.H.i.o <- (known_js$H.i)*(known_js$H.o)
+
+#Add the interaction between H.e and H.t
+known_js$interaction.H.shiftr.t <- (known_js$H.Shift.r)*(known_js$H.t)
+
+#Add the transformation of squaring H.period
+known_js$squared_H.period <- (known_js$H.period)^2
+
+#Add the transformation of squaring DD.i.e
+known_js$squared_DD.i.e <- (known_js$DD.i.e)^2
+```
+
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+#Make a summary of the dataset
+summary1 <- summary(known_mm[1:9])
+summary2 <- summary(known_mm[10:19])
+summary3 <- summary(known_mm[20:29])
+summary4 <- summary(known_mm[30:34])
+#boxplot
+#boxplot(known_mm$sessionIndex~known_mm$subject)
+#boxplot with title and axis labels
+#boxplot(known_mm$sessionIndex~known_mm$subject, main="Sessions for Users", xlab="Subject", ylab="Session Index")
+
+#Make a boxplot with subject and session index and add a title
+#Eliminate the labels for the subjects
+# https://stackoverflow.com/questions/35090883/remove-all-of-x-axis-labels-in-ggplot
+#Accessed on Sunday April 22nd
+#Used to figure out how to get rid of the labels
+ggplot()+geom_boxplot(aes(subject, sessionIndex), data=known_mm)+ggtitle("Sessions for Users")+theme(axis.text.x=element_blank())
+```
+
+```{r include=FALSE,warning=F,message=F}
+# Missing values check
+apply(known_aj,2,function(x) sum(is.na(x)))
+```
+
+### Summary of the Known Dataset
+
+These predictors describe timing between typings, the session, and the amount of entries into each session (Final Typing 2018, 1-4). Through initial exploration shown in the figure above, we can see that we have two unique session indexes. The most users were in session 8. We also checked for missing values and there were none that appeared.
+
+## Exploratory Analysis
+
+In the Exploratory analysis we are going for 4 methods: correlation, VIF function, variable importance using random forest, and histograms for each numeric variable.
+
+### Correlation
+
+```{r, include=FALSE}
+#develop plot pairs for the first few columns and then continue till you capture all columns
+#Give the pairs plot a title
+pairs(known_mm[,2:6], main="Pairs of known_mm Stats")
+pairs(known_mm[,c(2,11:16)], main="Pairs of known_mm Stats")
+pairs(known_mm[,c(2,17:22)], main="Pairs of known_mm Stats")
+pairs(known_mm[,c(2,23:28)], main="Pairs of known_mm Stats")
+
+#develop plot pairs for the last few columns with the subject
+#Give the pairs plot a title
+pairs(known_mm[,c(2,7:10)], main="Pairs of known_mm Stats")
+pairs(known_mm[,c(2,29:34)], main="Pairs of known_mm Stats")
+
+#This comes from my HW 3
+#Look at the correlation of our variables between each other
+cor(known_mm[,c(-1,-2)])
+
+#Find the different possible subjects
+levels(known_mm$subject)
+#Find the number of subjects
+length(levels(known_mm$subject))
+```
+
+```{r, include=FALSE, warning=FALSE, message=FALSE, fig.height=3}
+#boxplot with title and axis labels
+#boxplot(known_mm$sessionIndex~known_mm$subject, main="Sessions for Users", xlab="Subject", ylab="Session Index")
+
+#Make a boxplot with subject and session index and add a title
+#Eliminate the labels for the subjects
+# https://stackoverflow.com/questions/35090883/remove-all-of-x-axis-labels-in-ggplot
+#Accessed on Sunday April 22nd
+#Used to figure out how to get rid of the labels
+ggplot()+geom_boxplot(aes(subject, sessionIndex), data=known_mm)+ggtitle("Sessions for Users")+theme(axis.text.x=element_blank())
+```
+
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+#Make a table of UD variables:
+
+kable(summary(known_mm[,c(6,12,15,21)]))
+kable(summary(known_mm[,c(24,27,30,33)]))
+```
+
+
+Using correlation we noticed a peculiar pattern among UD variables. These had a negative minimum time over the set of data. The only UD variable this did not occur in was UD.five.Shift.r where the minimum was positive. To understand this better, we would need to know what constituted as a negative time for these variables. It is happening between all of them, which is why it seems as though there is a reason. Due to that and the correlation evidence seen below, these will be excluded in the dataset. We also noticed that these were always less than DD, which seems to be calculating the same thing. This will lead to a collinearity problem later on.
+
+We also ran into some correlations that stood out. There is a strong correlation between H.period and H.o with the highest at almost .69. H.e and H.t have a correlation of .72. H.i and H.o is a higher correlation of .66. H.e and H.period have the second highest correlation at .60 compared to the .72 above. .62 is the correlation between H.five and H.Shift.r. H.shift.r and H.t have a high correlation of .68. H.t and H.a have okay correlations with H.o at around .60, which is one of the lower we have seen for H.o. H.shift.r and H.a are correlated at .63.
+
+### VIF Function to see multi collinearity:
+
+```{r, include=FALSE, warning=FALSE, message=FALSE}  
+## https://beckmw.wordpress.com/2013/02/05/collinearity-and-stepwise-vif-selection/
+vif_func<-function(in_frame,thresh=10,trace=T,...){ 
+  
+  if(any(!'data.frame' %in% class(in_frame))) in_frame<-data.frame(in_frame)
+  
+  #get initial vif value for all comparisons of variables
+  vif_init<-NULL
+  var_names <- names(in_frame)
+  for(val in var_names){
+    regressors <- var_names[-which(var_names == val)]
+    form <- paste(regressors, collapse = '+')
+    form_in <- formula(paste(val, '~', form))
+    vif_init<-rbind(vif_init, c(val, VIF(lm(form_in, data = in_frame, ...))))
+  }
+  vif_max<-max(as.numeric(vif_init[,2]), na.rm = TRUE)
+
+  if(vif_max < thresh){
+    if(trace==T){ #print output of each iteration
+      prmatrix(vif_init,collab=c('var','vif'),rowlab=rep('',nrow(vif_init)),quote=F)
+      cat('\n')
+      cat(paste('All variables have VIF < ', thresh,', max VIF ',round(vif_max,2), sep=''),'\n\n')
+    }
+    return(var_names)
+  }
+  else{ 
+    in_dat<-in_frame 
+    #backwards selection of explanatory variables, stops when all VIF values are below 'thresh'
+    while(vif_max >= thresh){ 
+      vif_vals<-NULL
+      var_names <- names(in_dat)
+        
+      for(val in var_names){
+        regressors <- var_names[-which(var_names == val)]
+        form <- paste(regressors, collapse = '+')
+        form_in <- formula(paste(val, '~', form))
+        vif_add<-VIF(lm(form_in, data = in_dat, ...))
+        vif_vals<-rbind(vif_vals,c(val,vif_add))
+      }
+      max_row<-which(vif_vals[,2] == max(as.numeric(vif_vals[,2]), na.rm = TRUE))[1]
+
+      vif_max<-as.numeric(vif_vals[max_row,2])
+
+      if(vif_max<thresh) break
+      
+      if(trace==T){ #print output of each iteration
+        prmatrix(vif_vals,collab=c('var','vif'),rowlab=rep('',nrow(vif_vals)),quote=F)
+        cat('\n')
+        cat('removed: ',vif_vals[max_row,1],vif_max,'\n\n')
+        flush.console()
+      } 
+        in_dat<-in_dat[,!names(in_dat) %in% vif_vals[max_row,1]] 
+      }
+
+    return(names(in_dat)) 
+    } 
+} 
+
+# get important variables using VIF
+vif_func(in_frame=known_aj[,-1],thresh=5,trace=T)
+
+```
+
+VIF is a function to calculate the Variation Inflation Factor to see if variables have multicollinearity or not. We are setting the threshold as 5 so if a variable has less than 5 as VIF then that variable is not multicollinear. The variables that are selected by VIF are part of the correlation analysis above.
+
+### Variable Importance using random forest
+
+```{r,message=F,warning=F,highlight=FALSE, echo=FALSE, comment=NA, error=FALSE}
+
+set.seed(702)
+rf_known_kk <- randomForest(subject ~ ., data = known_kk, mtry = 6, importance = TRUE)
+
+## variable importnace plot using ggplot2 was referenced from https://gist.github.com/ramhiser/6dec3067f087627a7a85
+
+imp_df <- as.data.frame(importance(rf_known_kk))
+colnames(imp_df[,c(52:53)]) <- c("MeanDecreaseAccuracy", "MeanDecreaseGini")
+imp_df <- imp_df[-1,]
+
+var_importance1 <- data.frame(variable=setdiff(colnames(known_kk[,-1]), "subject"),
+                             importance=as.vector(imp_df$MeanDecreaseGini))
+var_importance1 <- arrange(var_importance1, desc(importance))
+var_importance1$variable <- factor(var_importance1$variable, levels=var_importance1$variable)
+p <- ggplot(var_importance1, aes(x=variable, weight=importance, fill=variable))
+p <- p + geom_bar() + ggtitle("       Variable Importance from Random Forest Fit")
+p <- p + xlab("MeanDecreaseGini") + ylab("Variable Importance")
+p <- p + scale_fill_discrete(name="Variable Name")
+p + theme(axis.text.x=element_blank(),
+          axis.text.y=element_text(size=12),
+          axis.title=element_text(size=16),
+          plot.title=element_text(size=18),
+          legend.title=element_text(size=16),
+          legend.text=element_text(size=12))
+```
+
+The other method used to fix the predictors is by looking into the variable importance plot from the random forest.
+Along with the variables selected in correlation we added two other variables from this varimportance plot they are: squared_H.period and squared_DD.i.e.
+
+###  Histogram: 
+
+We are plotting each numeric variable to see the distribution of them, to see if they are normally distributed or have skewed distribution. Through this we see that we have skewed distribution in some of the variables like UD.five.Shift.r, DD.period.t etc. To deal with the skewed distribution, it is worth while to do log transformation. Below are plots for both the known and unknown datasets. Overall through initial exploration it seems we may need to use Unsupervised learning to better distinguish the best variables to use.
+
+```{r echo=FALSE,warning=F,message=F, fig.height=8} 
+
+a <- qplot(known_aj$DD.period.t,geom = "histogram", xlab= "DD.period.t")
+b <-  qplot(known_aj$rep, geom = "histogram", xlab= "rep")
+c <-  qplot(known_aj$DD.t.i , geom = "histogram", xlab= "DD.t.i")
+d <- qplot(known_aj$DD.i.e , geom = "histogram", xlab= "DD.i.e")
+e <- qplot(known_aj$DD.e.five , geom = "histogram", xlab= "DD.e.five")
+f <- qplot(known_aj$DD.Shift.r.o , geom = "histogram", xlab= "DD.Shift.r.o")
+g <- qplot(known_aj$DD.o.a , geom = "histogram", xlab= "DD.o.a")
+h <- qplot(known_aj$DD.l.Return, geom = "histogram", xlab= "DD.l.Return")
+i <- qplot(known_aj$H.Return, geom = "histogram", xlab= "H.Return")
+j <- qplot(known_aj$H.Shift.r, geom = "histogram", xlab= "H.Shift.r")
+k <- qplot(known_aj$UD.n.l, geom = "histogram", xlab= "UD.n.l")
+l <- qplot(known_aj$UD.l.Return, geom = "histogram",  xlab= "UD.l.Return")
+m <- qplot(known_aj$H.a , geom = "histogram", xlab= "H.a")
+n <- qplot(known_aj$H.l , geom = "histogram",  xlab= "H.l")
+o <- qplot(known_aj$H.period, geom = "histogram",  xlab= "H.period")
+p <- qplot(known_aj$UD.five.Shift.r , geom = "histogram", xlab= "UD.five.Shift.r")
+q <- qplot(known_aj$H.e, geom = "histogram", xlab= "H.e")
+r <- qplot(known_aj$UD.Shift.r.o , geom = "histogram",  xlab= "UD.Shift.r.o")
+s <- qplot(known_aj$UD.t.i, geom = "histogram", xlab= "UD.t.i")
+t <- qplot(known_aj$UD.period.t , geom = "histogram",  xlab= "UD.period.t")
+u <- qplot(known_aj$H.n, geom = "histogram", xlab= "H.n")
+v <- qplot(known_aj$DD.five.Shift.r , geom = "histogram",  xlab= "DD.five.Shift.r")
+w <- qplot(known_aj$H.t, geom = "histogram", xlab= "H.t")
+x <- qplot(known_aj$UD.e.five , geom = "histogram", xlab= "UD.e.five")
+y <- qplot(known_aj$DD.n.l , geom = "histogram",  xlab= "DD.n.l")
+
+#Arrange our ggplots in columns
+grid.arrange(a, b, c, d
+             , e,f,g,h
+             ,i,j,k,l
+             ,m,n,o,p
+             ,q,r,s,t
+             ,u,v,w,x,y, ncol=4, top="Known Dataset")
+
+
+
+#Unknown histograms
+
+#datafile <- '/Users/kkosuri/Downloads/STAT-702/unknown.csv'
+#Unknown_aj <- read.csv(datafile)
+
+#compilation purposes
+Unknown_aj <- unknown_mm
+
+par(mfrow = c(3, 2)) 
+a <- qplot(Unknown_aj$DD.period.t,geom = "histogram", main = "Histogram of DD.period.t", xlab= "Distribution of DD.period.t")
+b <- qplot(Unknown_aj$rep, geom = "histogram", main = "Histogram of rep", xlab= "Distribution of rep")
+c <- qplot(Unknown_aj$DD.t.i , geom = "histogram", main = "Histogram of DD.t.i", xlab= "Distribution of DD.t.i")
+d <- qplot(Unknown_aj$DD.i.e , geom = "histogram", main = "Histogram of DD.i.e", xlab= "Distribution of DD.i.e")
+e <- qplot(Unknown_aj$DD.e.five , geom = "histogram", main = "Histogram of DD.e.five", xlab= "Distribution of DD.e.five")
+f <- qplot(Unknown_aj$DD.Shift.r.o , geom = "histogram", main = "Histogram of DD.Shift.r.o", xlab= "Distribution of DD.Shift.r.o")
+g <- qplot(Unknown_aj$DD.o.a , geom = "histogram", main = "Histogram of DD.o.a", xlab= "Distribution of DD.o.a")
+h <- qplot(Unknown_aj$DD.l.Return, geom = "histogram", main = "Histogram of DD.l.Return", xlab= "Distribution of DD.l.Return")
+i <- qplot(Unknown_aj$H.Return, geom = "histogram", main = "Histogram of H.Return", xlab= "Distribution of H.Return")
+j <- qplot(Unknown_aj$H.Shift.r, geom = "histogram", main = "Histogram of H.Shift.r", xlab= "Distribution of H.Shift.r")
+k <- qplot(Unknown_aj$UD.n.l, geom = "histogram", main = "Histogram of UD.n.l", xlab= "Distribution of UD.n.l")
+l <- qplot(Unknown_aj$UD.l.Return, geom = "histogram", main = "Histogram of UD.l.Return", xlab= "Distribution of UD.l.Return")
+m <- qplot(Unknown_aj$H.a , geom = "histogram", main = "Histogram of H.a", xlab= "Distribution of H.a")
+n <- qplot(Unknown_aj$H.l , geom = "histogram", main = "Histogram of H.l", xlab= "Distribution of H.l")
+o <- qplot(Unknown_aj$H.period, geom = "histogram", main = "Histogram of H.period", xlab= "Distribution of H.period")
+p <- qplot(Unknown_aj$UD.five.Shift.r , geom = "histogram", main = "Histogram of UD.five.Shift.r", xlab= "Distribution of UD.five.Shift.r")
+q <- qplot(Unknown_aj$H.e, geom = "histogram", main = "Histogram of H.e", xlab= "Distribution of H.e")
+r <- qplot(Unknown_aj$UD.Shift.r.o , geom = "histogram", main = "Histogram of UD.Shift.r.o", xlab= "Distribution of UD.Shift.r.o")
+s <- qplot(Unknown_aj$UD.t.i, geom = "histogram", main = "Histogram of UD.t.i", xlab= "Distribution of UD.t.i")
+t <- qplot(Unknown_aj$UD.period.t , geom = "histogram", main = "Histogram of UD.period.t", xlab= "Distribution of UD.period.t")
+u <- qplot(Unknown_aj$H.n, geom = "histogram", main = "Histogram of H.n", xlab= "Distribution of H.n")
+v <- qplot(Unknown_aj$DD.five.Shift.r , geom = "histogram", main = "Histogram of DD.five.Shift.r", xlab= "Distribution of DD.five.Shift.r")
+w <- qplot(Unknown_aj$H.t, geom = "histogram", main = "Histogram of H.t", xlab= "Distribution of H.t")
+x <- qplot(Unknown_aj$UD.e.five , geom = "histogram", main = "Histogram of UD.e.five", xlab= "Distribution of UD.e.five")
+y <- qplot(Unknown_aj$DD.n.l , geom = "histogram", main = "Histogram of DD.n.l", xlab= "Distribution of DD.n.l")
+
+#Arrange our ggplots in columns
+grid.arrange(a, b, c, d
+             , e,f,g,h
+             ,i,j,k,l
+             ,m,n,o,p
+             ,q,r,s,t
+             ,u,v,w,x,y, ncol=4, top="Unknown Dataset")
+```
+
+### Unsupervised
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+#Set seed for replicable results
+set.seed(702)
+#Run a pca after scaling
+pca <- prcomp(unknown_mm[,c(-1,-2,-5,-8,-11,-14,-17,-20,-23,-26,-29,-32)], scale=TRUE)
+#Look at rotation matrix
+rotation <- pca$rotation
+#Look at plot of vectors
+#biplot(pca, scale=0)
+
+# https://stackoverflow.com/questions/6578355/plotting-pca-biplot-with-ggplot2
+#Accessed on Friday April 20th
+#I used this to figure out the equivalent in ggplot from above.
+
+#load library that we installed
+ggbiplot(pca)
+```
+
+It appears that both H.a and H.e are good predictor variables based off our tree methods. They are also used in our other training methods that we originally picked. The rest of the values were either showing in first or second principal component but not in both (We see that the DD's are showing more for the second component and H values for the first component). The values in the first component we used completely in training since they explain most of the variance.
+
+## Adding New Variables based on Exploratory Analysis
+
+```{r, echo=FALSE}
+#Take e^(x) as a transformation of H.five
+known_mm$exp_H.five <- exp(known_mm$H.five)
+#Make a boxplot of the transformation with labels
+#boxplot(known_mm$exp_H.five~known_mm$subject, main="Exponential H.five", xlab="Subject", ylab="H.five")
+
+#Make a ggplot boxplot with a title
+#Eliminate the labels for the subjects
+# https://stackoverflow.com/questions/35090883/remove-all-of-x-axis-labels-in-ggplot
+#Accessed on Sunday April 22nd
+#Used to figure out how to get rid of the labels
+a <- ggplot()+geom_boxplot(aes(subject,exp_H.five), data=known_mm)+ggtitle("Exponential H.five")+theme(axis.text.x=element_blank())
+```
+
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+#Add the transformation of squaring DD.i.e
+known_mm$squared_DD.l.Return <- (known_mm$DD.l.Return)^2
+#Plot the transformation against subject
+#boxplot(known_mm$squared_DD.l.Return~known_mm$subject, main="Squared DD.l.Return", xlab="Subject", ylab="DD.l.Return")
+
+#Make a ggplot boxplot with a title
+#Eliminate the labels for the subjects
+# https://stackoverflow.com/questions/35090883/remove-all-of-x-axis-labels-in-ggplot
+#Accessed on Sunday April 22nd
+#Used to figure out how to get rid of the labels
+b <- ggplot()+geom_boxplot(aes(subject,squared_DD.l.Return), data=known_mm)+ggtitle("Squared DD.l.Return")+theme(axis.text.x=element_blank())
+```
+
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+#Add the transformation of squaring h.period
+known_mm$squared_H.period <- (known_mm$H.period)^2
+#Plot the transformation against subject
+#boxplot(known_mm$squared_H.period~known_mm$subject)
+
+#Make a ggplot boxplot with a title
+#Eliminate the labels for the subjects
+# https://stackoverflow.com/questions/35090883/remove-all-of-x-axis-labels-in-ggplot
+#Accessed on Sunday April 22nd
+#Used to figure out how to get rid of the labels
+c <- ggplot()+geom_boxplot(aes(subject,squared_H.period), data=known_mm)+ggtitle("Squared H.period")+theme(axis.text.x=element_blank())
+```
+
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+#Add the transformation of squaring DD.i.e
+known_mm$squared_DD.i.e <- (known_mm$DD.i.e)^2
+#Plot the transformation against subject
+#boxplot(known_mm$squared_DD.i.e~known_mm$subject)
+
+#Make a ggplot boxplot with a title
+#Eliminate the labels for the subjects
+# https://stackoverflow.com/questions/35090883/remove-all-of-x-axis-labels-in-ggplot
+#Accessed on Sunday April 22nd
+#Used to figure out how to get rid of the labels
+d <- ggplot()+geom_boxplot(aes(subject,squared_DD.i.e), data=known_mm)+ggtitle("Squared DD.i.e")+theme(axis.text.x=element_blank())
+```
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+#From Miranda's Homework 3
+#Arrange our ggplots in 2 columns
+grid.arrange(a, b, c, d, ncol=2)
+```
+
+We also explored some transformations of variables. Most helpful seemed to be the exponential transformation of H.five shown above. We can see the individual users start to separate out with this new transformed variable and later it will be used in some of the models in order to distinguish among subjects. It was also noticed that there is an interaction between H.period and H.o, H.e and H.t, H.i and H.o, and finally between H.Shift.r and H.t. We also thought the transformation of DD.l.Return was worth looking at. We can see that some of the subjects that stood out in this set were enhanced when we squared them. Another squared transformation of H.period shows even more separation here with the squared term. There are more separated subjects here than there was before which may yield helpful in analysis. We finally added one more transformation of squared DD.i.e. There are 2-3 subjects that could be separated easier with this variable. There are several outliers that were even more pronounced with the transformation and we can see certain subjects are proving to have more than others as far as observations outside of the normal.
+
+```{r, echo=FALSE}
+#Add the transformation of squaring DD.i.e
+known_mm$squared_dd.i.e <- (known_mm$DD.i.e)^2
+
+#Add the interaction between H.period and H.o
+known_mm$interaction.H.period.o <- (known_mm$H.period)*(known_mm$H.o)
+
+
+#Add the interaction between H.e and H.t
+known_mm$interaction.H.e.t <- (known_mm$H.e)*(known_mm$H.t)
+
+#Add the interaction between H.i and H.o
+known_mm$interaction.H.i.o <- (known_mm$H.i)*(known_mm$H.o)
+
+#Add the interaction between H.e and H.t
+known_mm$interaction.H.shiftr.t <- (known_mm$H.Shift.r)*(known_mm$H.t)
+
+#Exclude our UD variables
+known_mm <- known_mm[,c(-6,-9,-12,-15,-18,-21,-24,-27,-30,-33)]
+```
+
+```{r echo=FALSE,warning=F,message=F}
+#Take e^(x) as a transformation of H.five
+known_aj$exp_H.five <- exp(known_aj$H.five)
+
+#Add the transformation of squaring DD.i.e
+known_aj$squared_DD.l.Return <- (known_aj$DD.l.Return)^2
+known_aj$squared_h.period <- (known_aj$H.period)^2
+known_aj$squared_DD.i.e <- (known_aj$DD.i.e)^2
+
+#Add the interaction between H.period and H.o
+known_aj$interaction.H.period.o <- (known_aj$H.period)*(known_aj$H.o)
+
+
+#Add the interaction between H.e and H.t
+known_aj$interaction.H.e.t <- (known_aj$H.e)*(known_aj$H.t)
+
+#Add the interaction between H.i and H.o
+known_aj$interaction.H.i.o <- (known_aj$H.i)*(known_aj$H.o)
+
+#Add the interaction between H.e and H.t
+known_aj$interaction.H.shiftr.t <- (known_aj$H.Shift.r)*(known_aj$H.t)
+
+# col.remove <- c("rep","UD.period.t","UD.t.i","UD.i.e","UD.e.five","UD.five.Shift.r","UD.Shift.r.o","UD.o.a","UD.a.n","UD.n.l","UD.a.n","UD.n.l","UD.l.Return")
+
+col.remove <- c("sessionIndex","rep","UD.period.t","UD.t.i","UD.i.e","UD.e.five","UD.five.Shift.r","UD.Shift.r.o","UD.o.a","UD.a.n","UD.n.l","UD.a.n","UD.n.l","UD.l.Return")
+
+# Remove variables which are not important
+known_aj <- known_aj[, !(colnames(known_aj) %in% col.remove)] 
+```
+
+Log transformations on the variables in which had skewed distribution was used in creating a new, log transformed dataset. This will aid in dealing with the skewness to help create better performing models.
+
+
+```{r include=FALSE,warning=F,message=F} 
+
+known_aj$DD.period.t<-log(known_aj$DD.period.t)
+known_aj$DD.t.i<-log(known_aj$DD.t.i)
+known_aj$DD.i.e<-log(known_aj$DD.i.e)
+known_aj$DD.e.five<-log(known_aj$DD.e.five)
+known_aj$DD.Shift.r.o<-log(known_aj$DD.Shift.r.o)
+known_aj$DD.o.a<-log(known_aj$DD.o.a)
+known_aj$DD.l.Return<-log(known_aj$DD.l.Return)
+known_aj$H.a<-log(known_aj$H.a)
+known_aj$H.l<-log(known_aj$H.l)
+known_aj$DD.five.Shift.r<-log(known_aj$DD.five.Shift.r)
+known_aj$DD.n.l<-log(known_aj$DD.n.l)
+```
+
+
+## Model Evaluation
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+#Set seed for replicable results
+set.seed(702)
+#set a training set according to example from cami on news feed
+#Take the number of observations and sample 70% of them
+train <- sample(length(known_mm$subject), length(known_mm$subject)*.7)
+#Train the dataset
+known_mm_train <- known_mm[train,c(-2,-3)]
+#Test the dataset
+known_mm_test <- known_mm[-train,c(-1,-2,-3)]
+known_mm_test_subject <- known_mm[-train,1]
+```
+
+For all the analysis below the chosen split was a 70/30 split for the train and test set for VSA method. We chose this split, even though it may split up sessions in order to have all users represented in our training. This will allow for us to classify sessions for users in session 8, as well as users in session 7 in one sitting. To completely assess the models and their accuracy, since this approach is variable, we will also add in a 5-fold validation method. 
+
+### Trees
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+#Set seed for replicable results
+set.seed(702)
+
+#From Miranda's stat 701 hw 5 accessed Tuesday April 10th
+#That hw was based on Chapter 9 of a Handbook of Statistical Analysis
+#This is then used down in the validation portion
+
+#Use rpart to create our splits for our regression tree
+#Predict subject with all the other predictors as the split option
+#Specify the minimum split as 10
+#Use the training set for the model
+known_mm_rpart <- rpart(subject~., control=rpart.control(minsplit=10), data=known_mm_train)
+
+#predict our pred values based on our tree
+predictions <- predict(known_mm_rpart, newdata = known_mm_test, type="class")
+
+#take the prediction error column and find the minimum
+error <- which.min(known_mm_rpart$cptable[,"xerror"])
+#now take the minimum from the prediction error and collect the CP column for that value.
+cp <- known_mm_rpart$cptable[error, "CP"]
+#Prune our tree
+known_mm_prune <- prune(known_mm_rpart, cp = cp)
+
+#predict our pred values based on our pruned tree
+predictions2 <- predict(known_mm_prune, newdata = known_mm_test, type="class")
+
+#Similar to Miranda's 702 hw 10 accessed on Tuesday April 10th (Everything below here)
+#I followed a similar way to calculate error rate as Hw 6 3d when doing Hw 10
+
+#Make an empty vector to fill below based on the above classifications
+predictions_rpart <- vector("logical", length(known_mm_test[,1]))
+
+  for (i in 1:length(known_mm_test[,1])) {
+      if (known_mm_test_subject[i]==predictions[i]) #For equality this will be 0
+      {
+        predictions_rpart[i] = 0
+      } else                         #Otherwise let it be 1
+      {
+        predictions_rpart[i] = 1
+      }
+  }  
+#Compute the error of predictions
+error_rpart_val <- sum(predictions_rpart)/(length(predictions_rpart))
+
+#Make an empty vector to fill below based on the above classifications
+predictions2_rpart <- vector("logical", length(known_mm_test[,1]))
+
+  for (i in 1:length(known_mm_test[,1])) {
+      if (known_mm_test_subject[i]==predictions2[i]) #For equality this will be 0
+      {
+        predictions2_rpart[i] = 0
+      } else                         #Otherwise let it be 1
+      {
+        predictions2_rpart[i] = 1
+      }
+  }  
+#Compute the error of predictions2
+error_rpart_prune <- sum(predictions2_rpart)/(length(predictions2_rpart))
+errors <- sum(predictions2_rpart)
+
+```
+
+The first tree model was a regular decision tree. This was done using rpart due to the significant number of variables that included all but the UD, sessionIndex, and rep. A minimum split of 10 was specified in order for smaller splits to be excluded. The testing sets for our sessions was split into two sets: session 7 testing set and session 8 testing set. This includes the whole testing set above, except broken out into two because of the unique session user. Dr. Saunders method, that suggests the maximum reps associated with one user in an event of interest was the chosen typer, was used. Then the two sessions were averaged together to get an overall session accuracy rate. The average session accuracy rate between session 7 and session 8 is an accuracy of 54%. Session 8 had a better accuracy rate overall at 65% where session 7 was at 43%. Then for k-fold, 68% for the average session accuracy, 76% for session 8 and 59% for session 7. So this model is performing okay on our sessions. The variables that the Rpart tree chose for the tree include interaction.H.e.t, DD.Shift.r.o, H.e, interaction.H.period.o, H.Shift.r, DD.five.Shift.r, DD.i.e, H.a, DD.period.t, DD.l.Return, DD.t.i, interaction.H.shiftr.t, DD.n.l, H.t, H.l, DD.e.five, H.period, H.n, H.i, H.o, DD.a.n. We noticed above that the interaction terms may be helpful which we see in the above selection. We also found above that H.a is a good separator of subjects as well.
+
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+set.seed(702)
+#FROM Sample that dr. saunders outputted
+#Modified to fit my needs
+#Model from above
+known_mm_rpart <- rpart(subject~., control=rpart.control(minsplit=10), data=known_mm_train)
+#Make an empty place holder
+pred.s7=NULL
+#Make a train set that still has session so we can seperate the test set out
+known_mm_test_for_session <- known_mm[-train,-3]
+#Seperate test sets out for each session
+test.s7 <- known_mm_test_for_session[known_mm_test_for_session$sessionIndex==7,-2]
+test.s8 <- known_mm_test_for_session[known_mm_test_for_session$sessionIndex==8,-2]
+
+#Run through unique subject and classify each subjects reps
+#Place classifications in a row
+#1 row for each subject
+for (i in unique(test.s7$subject)){
+test.i=new.data=test.s7[test.s7$subject==i,-1]
+pred.s7=rbind(pred.s7,
+table(predict(known_mm_rpart, newdata=test.i, type="class")))
+}
+
+#Add row names for the subjects
+#make a csv so we can later examine our results
+rownames(pred.s7)=paste(unique(test.s7$subject))
+write.csv(pred.s7, "pred.s7.csv")
+
+#Make an empty place holder
+pred.s8=NULL
+#Run through unique subject and classify each subjects reps
+#Place classifications in a row
+#1 row for each subject
+for (i in unique(test.s8$subject)){
+test.i=new.data=test.s8[test.s8$subject==i,-1]
+pred.s8=rbind(pred.s8,
+table(predict(known_mm_rpart, newdata=test.i, type="class")))
+}
+
+#Add row names for the subjects
+#make a csv so we can later examine our results
+rownames(pred.s8)=paste(unique(test.s8$subject))
+write.csv(pred.s8, "pred.s8.csv")
+
+#Find acc rate for session 7
+session_acc_rpart_s7 <- mean((unique(test.s7$subject)==
+colnames(pred.s7)[apply(pred.s7, 1, which.max)]))
+#Find acc rate for session 8
+session_acc_rpart_s8 <- mean((unique(test.s8$subject)==
+colnames(pred.s8)[apply(pred.s8, 1, which.max)]))
+
+#Average the acc
+Average_session_acc_rpart <- mean(c(session_acc_rpart_s7, session_acc_rpart_s8))
+```
+
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+#Similar to Miranda's hw 7 code for last question accessed Tuesday April 10th
+#I followed a similar way to calculate error rate as Hw 6 3e when doing Hw 7
+#5-groups that are even that we can use below
+#It will repeat 1:5 for the length of the set to yield 5 groupings
+known_mm$Groups <- rep_len(1:5,length(known_mm$subject))
+
+set.seed(702)
+#Create a empty vector 0
+#We will fill it with error iterations
+predictions3 <- 0
+
+#Iterate n times
+for (i in 1:5) {
+#Train the dataset
+#exclude ith group
+train <- known_mm[-(known_mm$Groups==i),c(-2,-3,-34)]
+#Test the dataset on the ith group
+test <- known_mm[known_mm$Groups==i,c(-1,-2,-3,-34)]
+test_subject <- known_mm[known_mm$Groups==i,1]
+
+#From Miranda's stat 701 hw 5 accessed Tuesday April 10th
+#That hw was based on Chapter 9 of a Handbook of Statistical Analysis
+
+#Same model from above
+#Use rpart to create our splits for our regression tree
+#Predict subject with all the other predictors as the split option
+#Specify the minimum split as 10
+#Use the training set for the model
+known_mm_rpart <- rpart(subject~., control=rpart.control(minsplit=10), data=train)
+
+#predict our pred values based on our pruned tree
+predictions <- predict(known_mm_rpart, newdata = test, type="class")
+#Make a logical vector to contain class
+predictions2 <- vector("logical", length(test[,1]))
+
+  for (i in 1:length(test[,1])) {
+      if (test_subject[i]==predictions[i]) #For equality this will be 0
+      {
+        predictions2[i] = 0
+      } else                         #Otherwise let it be 1
+      {
+        predictions2[i] = 1
+      }
+  }  
+#Compute the error of predictions2
+error <- sum(predictions2)/(length(predictions2))
+#Add above error to predictions3
+predictions3 <- rbind(predictions3, error)
+}
+
+#Find the average error
+#Subtract the first value we added
+error_kfold_rpart <- sum(predictions3)/(length(predictions3)-1)
+```
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+#Similar to Miranda's hw 7 code for last question accessed Tuesday April 10th
+#I followed a similar way to calculate error rate as Hw 6 3e when doing Hw 7
+#5-groups that are even that we can use below
+#It will repeat 1:5 for the length of the set to yield 5 groupings
+known_mm$Groups <- rep_len(1:5,length(known_mm$subject))
+
+
+#Make an empty place holder
+pred.s7i = NULL
+pred.s8i = NULL
+pred.avg = NULL
+
+set.seed(702)
+#Create a empty vector 0
+#We will fill it with error iterations
+predictions3 <- 0
+
+#Iterate n times
+for (i in 1:5) {
+#Train the dataset
+#exclude ith group
+train <- known_mm[-(known_mm$Groups==i),c(-2,-3,-34)]
+#Test the dataset on the ith group
+test <- known_mm[known_mm$Groups==i,c(-1,-2,-3,-34)]
+test_subject <- known_mm[known_mm$Groups==i,1]
+
+#From Miranda's stat 701 hw 5 accessed Tuesday April 10th
+#That hw was based on Chapter 9 of a Handbook of Statistical Analysis
+
+#Same model from above
+#Use rpart to create our splits for our regression tree
+#Predict subject with all the other predictors as the split option
+#Specify the minimum split as 10
+#Use the training set for the model
+known_mm_rpart <- rpart(subject~., control=rpart.control(minsplit=10), data=train)
+
+#Modfied from Dr. Saunder's post
+#Make a train set that still has session so we can seperate the test set out
+known_mm_test_for_session <- test <- known_mm[known_mm$Groups==i,c(-3,-34)]
+#Seperate test sets out for each session
+test.s7 <- known_mm_test_for_session[known_mm_test_for_session$sessionIndex==7,-2]
+test.s8 <- known_mm_test_for_session[known_mm_test_for_session$sessionIndex==8,-2]
+pred.s7=NULL
+#Run through unique subject and classify each subjects reps
+#Place classifications in a row
+#1 row for each subject
+  for (i in unique(test.s7$subject)){
+  test.i=new.data=test.s7[test.s7$subject==i,-1]
+  pred.s7=rbind(pred.s7,
+  table(predict(known_mm_rpart, newdata=test.i, type="class")))
+  }
+
+#Add row names for the subjects
+#make a csv so we can later examine our results
+rownames(pred.s7)=paste(unique(test.s7$subject))
+
+#Make an empty place holder
+pred.s8=NULL
+#Run through unique subject and classify each subjects reps
+#Place classifications in a row
+#1 row for each subject
+  for (i in unique(test.s8$subject)){
+  test.i=new.data=test.s8[test.s8$subject==i,-1]
+  pred.s8=rbind(pred.s8,
+  table(predict(known_mm_rpart, newdata=test.i, type="class")))
+  }
+
+#Add row names for the subjects
+#make a csv so we can later examine our results
+rownames(pred.s8)=paste(unique(test.s8$subject))
+
+
+#Find acc for session 7 i
+session_acc_rpart_s7 <- mean((unique(test.s7$subject)==
+colnames(pred.s7)[apply(pred.s7, 1, which.max)]))
+#Find acc for session 8
+session_acc_rpart_s8 <- mean((unique(test.s8$subject)==
+colnames(pred.s8)[apply(pred.s8, 1, which.max)]))
+
+#Add acc to vector
+pred.s8i <- rbind(pred.s8i, session_acc_rpart_s8)
+#Add acc to vector
+pred.s7i <- rbind(pred.s7i, session_acc_rpart_s7)
+
+#Average the acc
+Average_session_acc_rpart_kfold <- mean(c(session_acc_rpart_s7, session_acc_rpart_s8))
+
+pred.avg <- rbind(pred.avg, Average_session_acc_rpart_kfold)
+}
+
+#Find the average acc
+#Subtract the first value we added
+error_kfold_rpart <- sum(predictions3)/(length(predictions3)-1)
+error_kfold_session_rpart <- mean(pred.avg)
+error_kfold_session_rpart_s8 <- mean(pred.s8i)
+error_kfold_session_rpart_s7 <- mean(pred.s7i)
+```
+
+
+```{r, include=FALSE, warning=FALSE, message=FALSE}
+#From Miranda's stat 701 hw 5 accessed Tuesday April 10th
+#That hw was based on Chapter 9 of a Handbook of Statistical Analysis
+#Plot with as.party to create a nice looking regression tree.
+#Use our model from above
+plot(as.party(known_mm_rpart), 
+     tp_args = list(id = FALSE))
+```
+
+
+```{r, include=FALSE, warning=FALSE, message=FALSE}
+#Use our model from above
+known_mm_rpart
+```
+
+### Bagging
+
+```{r,include=FALSE,warning=F,message=F}
+#Similar code to Miranda's HW 10 access Tuesday April 10th
+#HW 10 followed a structure of Chapter 8 lab in an intro to statistical learning
+set.seed(702)
+#perform bagging using 30 predictors
+bag.known_mm <- randomForest(subject~., data=known_mm_train, mtry=30, importance=TRUE)
+
+#Predict new values from our model
+bag_new <- predict(bag.known_mm, newdata=known_mm_test)
+#Again set up similar to HW 6 question 3d when doing hw 10
+#Make an empty vector to fill below based on the above classifications
+predictions_bag <- vector("logical", length(known_mm_test[,1]))
+
+  for (i in 1:length(known_mm_test[,1])) {
+      if (known_mm_test_subject[i]==bag_new[i]) #For equality this will be 0
+      {
+        predictions_bag[i] = 0
+      } else                         #Otherwise let it be 1
+      {
+        predictions_bag[i] = 1
+      }
+  }  
+#Compute the error of predictions2
+error_bag_val <- sum(predictions_bag)/(length(predictions_bag))
+errors <- sum(predictions_bag)
+```
+
+Next a bagging algorithm with the *randomForest()* command was trained. This was given 30 possible predictors to choose from at each split, which excludes all UD variables, sessionIndex, and rep. We then let importance=TRUE to determine important variables (R Help). The model then ran and we predicted the test set using that model. We obtained an error rate of 10.5%, which is an estimated accuracy of 89.5% on the repetitions for each typer. This is predicting highly accurately and seems to be a better fit than our tree algorithm above. We know from class that this method reduces the variance found in our previous model from repeated sampling and training (James et. al, 317). When running 5-fold cross validation the error rate become almost negligent. We have an accuracy of 99% on the repetitions. It appears the model lends 100% accuracy on our datasets with an error rate that was extremely low. These errors were spread out between sessions and remained low enough that for our users, most of their reps were predicting correctly. This leads to our sessions being correctly identified for the proper users. Also, looking at mean decrease in accuracy from the importance function on our model we see that the variables that have the biggest importance is DD.n.l, H.n, and H.Shift.r, and DD.e.five, which we saw above as important variables as well.
+
+```{r, include=FALSE, warning=FALSE, message=FALSE}
+#Use our model from above
+#Similar code to Miranda's HW 10 access Tuesday April 10th
+#Print importance of varaibles with the mean decrease in accuracy as the measure for each variable
+importance(bag.known_mm)[1:15,"MeanDecreaseAccuracy"]
+importance(bag.known_mm)[16:30,"MeanDecreaseAccuracy"]
+```
+
+
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+#Similar to Miranda's hw 7 code for last question accessed Tuesday April 10th
+#I followed a similar way to calculate error rate as Hw 6 3e when doing Hw 7
+#5-groups that are even that we can use below
+#It will repeat 1:5 for the length of the set to yield 5 groupings
+known_mm$Groups <- rep_len(1:5,length(known_mm$subject))
+
+set.seed(702)
+#Create a empty vector 0
+#We will fill it with error iterations
+predictions3 <- 0
+
+#Iterate n times
+for (i in 1:5) {
+#Train the dataset
+#exclude ith group
+train <- known_mm[-(known_mm$Groups==i),c(-2,-3, -34)]
+#Test the dataset on the ith group
+test <- known_mm[known_mm$Groups==i,c(-1,-2,-3, -34)]
+test_subject <- known_mm[known_mm$Groups==i,1]
+set.seed(702)
+#Same model from above
+#perform bagging using 30 predictors
+bag.known_mm <- randomForest(subject~., data=train, mtry=30, importance=TRUE)
+
+#Predict new values from our model
+bag_new <- predict(bag.known_mm, newdata=test)
+
+#Make a logical vector to contain class
+predictions2 <- vector("logical", length(test[,1]))
+
+  for (i in 1:length(test[,1])) {
+      if (test_subject[i]==bag_new[i]) #For equality this will be 0
+      {
+        predictions2[i] = 0
+      } else                         #Otherwise let it be 1
+      {
+        predictions2[i] = 1
+      }
+  }  
+#Compute the error of predictions2
+error <- sum(predictions2)/(length(predictions2))
+#Add above error to predictions3
+predictions3 <- rbind(predictions3, error)
+}
+
+#Find the average error
+#Subtract the first value we added
+error_kfold_bag <- sum(predictions3)/(length(predictions3)-1)
+```
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+#Set seed for replicable results
+set.seed(702)
+#set a training set according to example from cami on news feed
+#Take the number of observations and sample 70% of them
+train <- sample(length(known_mm$subject), length(known_mm$subject)*.7)
+
+set.seed(702)
+#FROM Sample that Dr. Saunders outputted
+#Modified to fit my needs
+#Model from above
+#perform bagging using 30 predictors
+bag.known_mm <- randomForest(subject~., data=known_mm_train, mtry=30, importance=TRUE)
+#Make an empty place holder
+pred.s7=NULL
+#Make a train set that still has session so we can seperate the test set out
+known_mm_test_for_session <- known_mm[-train,-3]
+#Seperate test sets out for each session
+test.s7 <- known_mm_test_for_session[known_mm_test_for_session$sessionIndex==7,-2]
+test.s8 <- known_mm_test_for_session[known_mm_test_for_session$sessionIndex==8,-2]
+
+#Run through unique subject and classify each subjects reps
+#Place classifications in a row
+#1 row for each subject
+for (i in unique(test.s7$subject)){
+test.i=new.data=test.s7[test.s7$subject==i,-1]
+pred.s7=rbind(pred.s7,
+table(predict(bag.known_mm, newdata=test.i)))
+}
+
+#Add row names for the subjects
+#make a csv so we can later examine our results
+rownames(pred.s7)=paste(unique(test.s7$subject))
+write.csv(pred.s7, "pred.s7.csv")
+
+#Make an empty place holder
+pred.s8=NULL
+#Run through unique subject and classify each subjects reps
+#Place classifications in a row
+#1 row for each subject
+for (i in unique(test.s8$subject)){
+test.i=new.data=test.s8[test.s8$subject==i,-1]
+pred.s8=rbind(pred.s8,
+table(predict(bag.known_mm, newdata=test.i)))
+}
+
+#Add row names for the subjects
+#make a csv so we can later examine our results
+rownames(pred.s8)=paste(unique(test.s8$subject))
+write.csv(pred.s8, "pred.s8.csv")
+
+#Find acc rate for session 7
+session_acc_bag_s7 <- mean((unique(test.s7$subject)==
+colnames(pred.s7)[apply(pred.s7, 1, which.max)]))
+#Find acc rate for session 8
+session_acc_bag_s8 <- mean((unique(test.s8$subject)==
+colnames(pred.s8)[apply(pred.s8, 1, which.max)]))
+
+#Average the acc
+Average_session_acc_bag <- mean(c(session_acc_bag_s7, session_acc_bag_s8))
+```
+
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+#Similar to Miranda's hw 7 code for last question accessed Tuesday April 10th
+#I followed a similar way to calculate error rate as Hw 6 3e when doing Hw 7
+#5-groups that are even that we can use below
+#It will repeat 1:5 for the length of the set to yield 5 groupings
+known_mm$Groups <- rep_len(1:5,length(known_mm$subject))
+
+set.seed(702)
+
+#Make an empty place holder
+pred.s7i = NULL
+pred.s8i = NULL
+pred.avg = NULL
+#Create a empty vector 0
+#We will fill it with error iterations
+predictions3 <- 0
+
+#Iterate n times
+for (i in 1:5) {
+#Train the dataset
+#exclude ith group
+train <- known_mm[-(known_mm$Groups==i),c(-2,-3, -34)]
+#Test the dataset on the ith group
+test <- known_mm[known_mm$Groups==i,c(-1,-2,-3, -34)]
+test_subject <- known_mm[known_mm$Groups==i,1]
+set.seed(702)
+#Same model from above
+#perform bagging using 30 predictors
+bag.known_mm <- randomForest(subject~., data=train, mtry=30, importance=TRUE)
+
+#Modified from Dr. Saunders post
+#Make an empty place holder
+pred.s7=NULL
+#Modfied from Dr. Saunder's post
+#Make a train set that still has session so we can seperate the test set out
+known_mm_test_for_session <- test <- known_mm[known_mm$Groups==i,c(-3,-34)]
+#Seperate test sets out for each session
+test.s7 <- known_mm_test_for_session[known_mm_test_for_session$sessionIndex==7,-2]
+test.s8 <- known_mm_test_for_session[known_mm_test_for_session$sessionIndex==8,-2]
+
+#Run through unique subject and classify each subjects reps
+#Place classifications in a row
+#1 row for each subject
+for (i in unique(test.s7$subject)){
+test.i=new.data=test.s7[test.s7$subject==i,-1]
+pred.s7=rbind(pred.s7,
+table(predict(bag.known_mm, newdata=test.i)))
+}
+
+#Add row names for the subjects
+#make a csv so we can later examine our results
+rownames(pred.s7)=paste(unique(test.s7$subject))
+write.csv(pred.s7, "pred.s7.csv")
+
+#Make an empty place holder
+pred.s8=NULL
+#Run through unique subject and classify each subjects reps
+#Place classifications in a row
+#1 row for each subject
+for (i in unique(test.s8$subject)){
+test.i=new.data=test.s8[test.s8$subject==i,-1]
+pred.s8=rbind(pred.s8,
+table(predict(bag.known_mm, newdata=test.i)))
+}
+
+#Add row names for the subjects
+#make a csv so we can later examine our results
+rownames(pred.s8)=paste(unique(test.s8$subject))
+write.csv(pred.s8, "pred.s8.csv")
+
+#Find acc rate for session 7
+session_acc_bag_s7 <- mean((unique(test.s7$subject)==
+colnames(pred.s7)[apply(pred.s7, 1, which.max)]))
+#Find acc rate for session 8
+session_acc_bag_s8 <- mean((unique(test.s8$subject)==
+colnames(pred.s8)[apply(pred.s8, 1, which.max)]))
+
+#Add accuracy to vector
+pred.s8i <- rbind(pred.s8i, session_acc_bag_s8)
+#Add accuracy to vector
+pred.s7i <- rbind(pred.s7i, session_acc_bag_s7)
+
+#Average the accuracy
+Average_session_acc_bag_kfold <- mean(c(session_acc_bag_s7, session_acc_bag_s8))
+
+pred.avg <- rbind(pred.avg, Average_session_acc_bag_kfold)
+}
+
+#Find the average accuracy
+#Subtract the first value we added
+error_kfold_bag <- sum(predictions3)/(length(predictions3)-1)
+error_kfold_session_bag <- mean(pred.avg)
+error_kfold_session_bag_s8 <- mean(pred.s8i)
+error_kfold_session_bag_s7 <- mean(pred.s7i)
+```
+
+### Random Forest
+
+```{r,include=FALSE,warning=F,message=F}
+#Similar code to Miranda's HW 10 accessed Tuesday April 10th
+#The code in HW 10 was modified to from the chapter 8 lab in an intro to statistical learning
+set.seed(702)
+#perform rf using 14 predictors
+rf.known_mm <- randomForest(subject~., data=known_mm_train, mtry=14, importance=TRUE)
+
+#Predict new values from our model
+rf_new <- predict(rf.known_mm, newdata=known_mm_test)
+#Again set up similar to HW 6 question 3d when doing hw 10
+#Make an empty vector to fill below based on the above classifications
+predictions_rf <- vector("logical", length(known_mm_test[,1]))
+
+  for (i in 1:length(known_mm_test[,1])) {
+      if (known_mm_test_subject[i]==rf_new[i]) #For equality this will be 0
+      {
+        predictions_rf[i] = 0
+      } else                         #Otherwise let it be 1
+      {
+        predictions_rf[i] = 1
+      }
+  }  
+#Compute the error of predictions2
+error_rf_val <- sum(predictions_rf)/(length(predictions_rf))
+```
+
+We have an error rate of 7.9% when doing the random forest method classifying reps. I trained a random forest model with all the predictors on the train set excluding rep, UD variables and Session index. We used 14 as the number of possible predictors for a split. We then let importance=TRUE to determine important variables (R Help). The book tells us that the random forest should be better than bagging due to the predictor specification difference at each split (James et. al, 319). This could also suggest similarity between the trees since we saw a good reduction of error when using the method above (James et. al, 320). We then have an accuracy of 92.1% on our test dataset reps. This is a big improvement on all of our models. We again performed 5-fold validation on the model and got 0% when looking at reps. Performing similar to bagging, we are receiving a 100% session accuracy rate for VSA and 99.5% with 5-fold since we predicted so well on the reps themselves. Looking at importance of variables, as far as decrease in accuracy, we have the most important variables as DD.n.l, DD.e.five, and H.Shift.r. These are also some of the important variables we have seem from above, which solidifies that the model is performing similar to our others with a slight improvement overall.
+
+
+```{r, include=FALSE, warning=FALSE, message=FALSE}
+#Use our model from above
+#Similar code to Miranda's HW 10 access Tuesday April 10th
+#Print importance of varaibles with the mean decrease in accuracy as the measure for each variable
+importance(rf.known_mm)[1:15,"MeanDecreaseAccuracy"]
+importance(rf.known_mm)[16:30,"MeanDecreaseAccuracy"]
+```
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+#Similar to Miranda's hw 7 code for last question accessed Tuesday April 10th
+#I followed a similar way to calculate error rate as Hw 6 3e when doing Hw 7
+#5-groups that are even that we can use below
+#It will repeat 1:5 for the length of the set to yield 5 groupings
+known_mm$Groups <- rep_len(1:5,length(known_mm$subject))
+
+set.seed(702)
+#Create a empty vector 0
+#We will fill it with error iterations
+predictions3 <- 0
+
+#Iterate n times
+for (i in 1:5) {
+#Train the dataset
+#exclude ith group
+train <- known_mm[-(known_mm$Groups==i),c(-2,-3,-34)]
+#Test the dataset on the ith group
+test <- known_mm[known_mm$Groups==i,c(-1,-2,-3,-34)]
+test_subject <- known_mm[known_mm$Groups==i,1]
+set.seed(702)
+#Same model from above
+#perform rf using 14 predictors
+rf.known_mm <- randomForest(subject~., data=train, mtry=14, importance=TRUE)
+
+#Predict new values from our model
+rf_new <- predict(rf.known_mm, newdata=test)
+
+#Make a logical vector to contain class
+predictions2 <- vector("logical", length(test[,1]))
+
+  for (i in 1:length(test[,1])) {
+      if (test_subject[i]==rf_new[i]) #For equality this will be 0
+      {
+        predictions2[i] = 0
+      } else                         #Otherwise let it be 1
+      {
+        predictions2[i] = 1
+      }
+  }  
+#Compute the error of predictions2
+error <- sum(predictions2)/(length(predictions2))
+#Add above error to predictions3
+predictions3 <- rbind(predictions3, error)
+}
+
+#Find the average error
+#Subtract the first value we added
+error_kfold_rf <- sum(predictions3)/(length(predictions3)-1)
+```
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+#Set seed for replicable results
+set.seed(702)
+#set a training set according to example from cami on news feed
+#Take the number of observations and sample 70% of them
+train <- sample(length(known_mm$subject), length(known_mm$subject)*.7)
+
+set.seed(702)
+#FROM Sample that Dr. Saunders outputted
+#Modified to fit my needs
+#Same model from above
+#perform rf using 14 predictors
+rf.known_mm <- randomForest(subject~., data=known_mm_train, mtry=14, importance=TRUE)
+#Make an empty place holder
+pred.s7=NULL
+#Make a train set that still has session so we can seperate the test set out
+known_mm_test_for_session <- known_mm[-train,-3]
+#Seperate test sets out for each session
+test.s7 <- known_mm_test_for_session[known_mm_test_for_session$sessionIndex==7,-2]
+test.s8 <- known_mm_test_for_session[known_mm_test_for_session$sessionIndex==8,-2]
+
+#Run through unique subject and classify each subjects reps
+#Place classifications in a row
+#1 row for each subject
+for (i in unique(test.s7$subject)){
+test.i=new.data=test.s7[test.s7$subject==i,-1]
+pred.s7=rbind(pred.s7,
+table(predict(rf.known_mm, newdata=test.i)))
+}
+
+#Add row names for the subjects
+#make a csv so we can later examine our results
+rownames(pred.s7)=paste(unique(test.s7$subject))
+write.csv(pred.s7, "pred.s7.csv")
+
+#Make an empty place holder
+pred.s8=NULL
+#Run through unique subject and classify each subjects reps
+#Place classifications in a row
+#1 row for each subject
+for (i in unique(test.s8$subject)){
+test.i=new.data=test.s8[test.s8$subject==i,-1]
+pred.s8=rbind(pred.s8,
+table(predict(rf.known_mm, newdata=test.i)))
+}
+
+#Add row names for the subjects
+#make a csv so we can later examine our results
+rownames(pred.s8)=paste(unique(test.s8$subject))
+write.csv(pred.s8, "pred.s8.csv")
+
+#Find acc rate for session 7
+session_acc_rf_s7 <- mean((unique(test.s7$subject)==
+colnames(pred.s7)[apply(pred.s7, 1, which.max)]))
+#Find acc rate for session 8
+session_acc_rf_s8 <- mean((unique(test.s8$subject)==
+colnames(pred.s8)[apply(pred.s8, 1, which.max)]))
+
+#Average the acc
+Average_session_acc_rf <- mean(c(session_acc_rf_s7, session_acc_rf_s8))
+```
+
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+#Similar to Miranda's hw 7 code for last question accessed Tuesday April 10th
+#I followed a similar way to calculate error rate as Hw 6 3e when doing Hw 7
+#5-groups that are even that we can use below
+#It will repeat 1:5 for the length of the set to yield 5 groupings
+known_mm$Groups <- rep_len(1:5,length(known_mm$subject))
+
+set.seed(702)
+
+#Make an empty place holder
+pred.s7i = NULL
+pred.s8i = NULL
+pred.avg = NULL
+#Create a empty vector 0
+#We will fill it with error iterations
+predictions3 <- 0
+
+#Iterate n times
+for (i in 1:5) {
+#Train the dataset
+#exclude ith group
+train <- known_mm[-(known_mm$Groups==i),c(-2,-3, -34)]
+#Test the dataset on the ith group
+test <- known_mm[known_mm$Groups==i,c(-1,-2,-3, -34)]
+test_subject <- known_mm[known_mm$Groups==i,1]
+set.seed(702)
+#Same model from above
+#perform rf using 14 predictors
+rf.known_mm <- randomForest(subject~., data=known_mm_train, mtry=14, importance=TRUE)
+
+#Modified from Dr. Saunders post
+#Make an empty place holder
+pred.s7=NULL
+#Modfied from Dr. Saunder's post
+#Make a train set that still has session so we can seperate the test set out
+known_mm_test_for_session <- test <- known_mm[known_mm$Groups==i,c(-3,-34)]
+#Seperate test sets out for each session
+test.s7 <- known_mm_test_for_session[known_mm_test_for_session$sessionIndex==7,-2]
+test.s8 <- known_mm_test_for_session[known_mm_test_for_session$sessionIndex==8,-2]
+
+#Run through unique subject and classify each subjects reps
+#Place classifications in a row
+#1 row for each subject
+for (i in unique(test.s7$subject)){
+test.i=new.data=test.s7[test.s7$subject==i,-1]
+pred.s7=rbind(pred.s7,
+table(predict(rf.known_mm, newdata=test.i)))
+}
+
+#Add row names for the subjects
+#make a csv so we can later examine our results
+rownames(pred.s7)=paste(unique(test.s7$subject))
+write.csv(pred.s7, "pred.s7.csv")
+
+#Make an empty place holder
+pred.s8=NULL
+#Run through unique subject and classify each subjects reps
+#Place classifications in a row
+#1 row for each subject
+for (i in unique(test.s8$subject)){
+test.i=new.data=test.s8[test.s8$subject==i,-1]
+pred.s8=rbind(pred.s8,
+table(predict(rf.known_mm, newdata=test.i)))
+}
+
+#Add row names for the subjects
+#make a csv so we can later examine our results
+rownames(pred.s8)=paste(unique(test.s8$subject))
+write.csv(pred.s8, "pred.s8.csv")
+
+#Find acc rate for session 7
+session_acc_rf_s7 <- mean((unique(test.s7$subject)==
+colnames(pred.s7)[apply(pred.s7, 1, which.max)]))
+#Find acc rate for session 8
+session_acc_rf_s8 <- mean((unique(test.s8$subject)==
+colnames(pred.s8)[apply(pred.s8, 1, which.max)]))
+
+#Add accuracy to vector
+pred.s8i <- rbind(pred.s8i, session_acc_rf_s8)
+#Add accuracy to vector
+pred.s7i <- rbind(pred.s7i, session_acc_rf_s7)
+
+#Average the accuracy
+Average_session_acc_rf_kfold <- mean(c(session_acc_rf_s7, session_acc_rf_s8))
+
+pred.avg <- rbind(pred.avg, Average_session_acc_rf_kfold)
+}
+
+#Find the average accuracy
+#Subtract the first value we added
+error_kfold_rf <- sum(predictions3)/(length(predictions3)-1)
+error_kfold_session_rf <- mean(pred.avg)
+error_kfold_session_rf_s8 <- mean(pred.s8i)
+error_kfold_session_rf_s7 <- mean(pred.s7i)
+```
+
+
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+#Set seed for replicable results
+set.seed(702)
+#set a training set according to example from cami on news feed
+#Take session 8 and split it
+train <- sample(length(known_mm[known_mm$sessionIndex==8,"subject"]), length(known_mm[known_mm$sessionIndex==8,"subject"])*.7)
+
+set.seed(702)
+#FROM Sample that Dr. Saunders outputted
+#Modified to fit my needs
+#Same model from above
+#perform rf using 14 predictors
+rf.known_mm <- randomForest(subject~., data=known_mm[known_mm$sessionIndex==8,c(-2,-3)], mtry=14, importance=TRUE)
+#Make an empty place holder
+pred.s7=NULL
+#Make a train set that still has session so we can seperate the test set out
+known_mm_test <- known_mm[known_mm$sessionIndex==7,]
+known_mm_test_for_session <- known_mm_test[-train,-3]
+#Seperate test sets out for each session
+test.s7 <- known_mm_test_for_session[known_mm_test_for_session$sessionIndex==7,-2]
+test.s8 <- known_mm_test_for_session[known_mm_test_for_session$sessionIndex==8,-2]
+
+#Run through unique subject and classify each subjects reps
+#Place classifications in a row
+#1 row for each subject
+for (i in unique(test.s7$subject)){
+test.i=new.data=test.s7[test.s7$subject==i,-1]
+pred.s7=rbind(pred.s7,
+table(predict(rf.known_mm, newdata=test.i)))
+}
+
+#Add row names for the subjects
+#make a csv so we can later examine our results
+rownames(pred.s7)=paste(unique(test.s7$subject))
+write.csv(pred.s7, "pred.s7.csv")
+
+#Find acc rate for session 7
+session_acc_rf_s7_only <- mean((unique(test.s7$subject)==
+colnames(pred.s7)[apply(pred.s7, 1, which.max)]))
+```
+
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+#Set seed for replicable results
+set.seed(702)
+#set a training set according to example from cami on news feed
+#Take session 8 and split it
+train <- sample(length(known_mm[known_mm$sessionIndex==8,"subject"]), length(known_mm[known_mm$sessionIndex==8,"subject"])*.7)
+
+known_new <- known_mm[known_mm$sessionIndex==8,]
+
+#Train the dataset
+known_train <- known_new[train,c(-2,-3)]
+#Test the dataset
+known_test <- known_new[-train,c(-1,-2,-3)]
+known_test_subject <- known_new[-train,1]
+
+set.seed(702)
+#FROM Sample that Dr. Saunders outputted
+#Modified to fit my needs
+#Same model from above
+#perform rf using 14 predictors
+rf.known_mm <- randomForest(subject~., data=known_train, mtry=14, importance=TRUE)
+#Make an empty place holder
+pred.s8=NULL
+
+#Run through unique subject and classify each subjects reps
+#Place classifications in a row
+#1 row for each subject
+for (i in unique(known_test_subject)){
+test.i=new.data=known_test[known_test_subject==i,]
+pred.s8=rbind(pred.s8,
+table(predict(rf.known_mm, newdata=test.i)))
+}
+
+#Add row names for the subjects
+#make a csv so we can later examine our results
+rownames(pred.s8)=paste(unique(known_test_subject))
+write.csv(pred.s8, "pred.s7.csv")
+
+#Find acc rate for session 7
+session_acc_rf_s8_only <- mean((unique(known_test_subject)==
+colnames(pred.s8)[apply(pred.s8, 1, which.max)]))
+```
+
+The remaining models were trained with the following variables that we found in data exploration: H.period, DD.period.t, H.t, DD.t.i, H.i, DD.i.e, H.e, DD.e.five, H.five, DD.five.Shift.r, H.Shift.r, DD.Shift.r.o, H.o, DD.o.a, H.a, DD.a.n, H.n, DD.n.l, H.l, H.Return, DD.l.Return, squared_h.period, squared_dd.i.e, exp_H.five, squared_DD.l.Return, interaction.H.period.o, interaction.H.e.t, interaction.H.i.o, interaction.H.shiftr.t. The UD variables were not included in the models either.
+
+### QDA
+
+```{r,message=F,warning=F,highlight=FALSE, echo=FALSE, comment=NA, error=FALSE,fig.height=2, fig.width=2}
+##VSA
+set.seed(702)
+#Splitting the data into 70:30 ratio
+row <- sample(x=nrow(known_kk), size=.70*nrow(known_kk))
+
+known_kk_qda <- known_kk
+
+known_kk_qda$subject <- revalue(known_kk_qda$subject, c("s002"= 1, "s003"= 2, "s004"= 3, "s005"= 4, "s007"= 5, "s008"= 6, "s010"= 7, "s011"= 8, "s012"= 9, "s013"= 10, "s015"= 11, "s016"= 12, "s017"= 13, "s018"= 14, "s019"=15, "s020"= 16, "s021"= 17, "s022"= 18, "s024"= 19, "s025"= 20, "s026"= 21, "s027"= 22, "s028"= 23, "s029"= 24, "s030"= 25, "s031"= 26, "s032"= 27, "s033"= 28, "s034"= 29, "s035"= 30,
+"s036"= 31, "s037"= 32, "s038"= 33, "s039"= 34, "s040"= 35, "s041"= 36, "s042"= 37, "s043"= 38, "s044"= 39, "s046"= 40, "s047"= 41, "s048"= 42, "s049"= 43, "s050"= 44, "s051"= 45,
+"s052"= 46, "s053"= 47, "s054"= 48, "s055"= 49, "s056"= 50, "s057"=51))
+known_kk_qda[,'subject'] <- as.numeric(as.character(known_kk_qda[,'subject']))
+
+known_kk_qda_train <- known_kk_qda[row, ]
+known_kk_qda_test <- known_kk_qda[-row, ]
+
+ggplot(known_kk_qda_train,aes(x=subject)) + geom_histogram(binwidth = 0.1) + theme_classic() + ggtitle("Freq. of Subject")
+
+#70% records are assigned to train and only important precdictors are selected
+known_kk_train <- known_kk[row, c(2,5:6,8:9,11:12,14:15,17:18,20:21,23:24,26:27,29:30,32:33,35:43)]
+#30% records are assigned to test and only important precdictors are selected along with sessionindex
+# which will be used below to find accuracy based on session
+known_kk_test <- known_kk[-row, c(2:3,5:6,8:9,11:12,14:15,17:18,20:21,23:24,26:27,29:30,32:33,35:43)]
+
+##For QDA need to consider just the values of class where freq>dim(train)
+tt <- table(known_kk_train$subject)
+## only those subjects with freq > 30 are considered for training and testing respectively
+new_known_kk_train <- subset(known_kk_train, subject %in% names(tt[tt > 30]))
+#Using factor to drop unused levels
+new_known_kk_train$subject <- factor(new_known_kk_train$subject)
+#Fitting QDA with training set
+qda_fit <- qda(subject ~ ., data = new_known_kk_train)
+
+#Modfied from Dr. Saunder's post
+#To find the error by session
+pred.s7 <- NULL
+
+# tets set for sessionindex=7
+test.s7 <- known_kk_test[known_kk_test$sessionIndex==7,-2]
+# tets set for sessionindex=8
+test.s8 <- known_kk_test[known_kk_test$sessionIndex==8,-2]
+
+for (i in unique(test.s7$subject)){
+test.i <- new.data <- test.s7[test.s7$subject==i, -1]
+pred.s7 <- rbind(pred.s7, table(predict(qda_fit, newdata=test.i)$class))
+}
+
+#write.csv(pred.s7, "pred.s7.csv")
+
+#session error rate for sessionindex=7
+session_error_qda_s7 <- mean((unique(test.s7$subject)!=
+colnames(pred.s7)[apply(pred.s7, 1, which.max)]))
+qda_s7_Session_error <- session_error_qda_s7
+#0.8571429
+
+pred.s8 <- NULL
+
+for (i in unique(test.s8$subject)){
+test.i <- new.data <- test.s8[test.s8$subject==i, -1]
+pred.s8 <- rbind(pred.s8, table(predict(qda_fit, newdata=test.i)$class))
+}
+
+#write.csv(pred.s7, "pred.s7.csv")
+
+#session error rate for sessionindex=8
+session_error_qda_s8 <- mean((unique(test.s8$subject)!=
+colnames(pred.s7)[apply(pred.s8, 1, which.max)]))
+qda_session_error <- session_error_qda_s8
+#0.8431373
+
+#Average session error rate
+Average_session_error_rate_qda <- mean(session_error_qda_s8, session_error_qda_s8)
+#84.31373
+
+#5-Fold
+#Performing k-fold CV where k=5
+permut.n <- sample(1:1776,1776)
+#dividing the dataset into four splits
+folds <- cbind(sort(rep(seq(1,5,1), 355))[1:nrow(known_kk)], permut.n)
+
+error_pred_qda1 <- rep(0, 5)
+for (i in 1:5)
+{
+  index.i <- folds[folds[,1]==i, 2]
+  index.i <- index.i[!is.na(index.i)]
+  #1 split records are assigned to test and only important precdictors are selected with session index to find session error
+  known_kk_test <- known_kk[index.i, c(2:3,5:6,8:9,11:12,14:15,17:18,20:21,23:24,26:27,29:30,32:33,35:43)]
+  #remaining 4 split records are assigned to train and only important precdictors are selected
+  known_kk_train <- known_kk[-index.i, c(2,5:6,8:9,11:12,14:15,17:18,20:21,23:24,26:27,29:30,32:33,35:43)]
+  
+  tt <- table(known_kk_train$subject)
+  #For QDA need to consider just the values of class where freq>dim(train)
+  new_known_kk_train <- subset(known_kk_train, subject %in% names(tt[tt > 30]))
+  
+  new_known_kk_train$subject <- factor(new_known_kk_train$subject)
+  
+  known_kk_test$subject <- factor(known_kk_test$subject)
+  
+  qda_fit1 <- qda(subject ~ ., data = new_known_kk_train)
+ 
+  
+    pred.s7 <- NULL
+
+    #Test set for where sessionIndex = 7
+    test.s7 <- known_kk_test[known_kk_test$sessionIndex==7,-2]
+    #Test set for where sessionIndex = 8
+    test.s8 <- known_kk_test[known_kk_test$sessionIndex==8,-2]
+    
+    for (i in unique(test.s7$subject)){
+    test.i <- new.data <- test.s7[test.s7$subject==i, -1]
+    pred.s7 <- rbind(pred.s7, table(predict(qda_fit, newdata=test.i)$class))
+    }
+    
+    #write.csv(pred.s7, "pred.s7.csv")
+    #Session error rate for session index = 7
+    session_error_qda_s7 <- mean((unique(test.s7$subject)!=
+    colnames(pred.s7)[apply(pred.s7, 1, which.max)]))
+    
+    pred.s8 <- NULL
+    
+    for (i in unique(test.s8$subject)){
+    test.i <- new.data <- test.s8[test.s8$subject==i, -1]
+    pred.s8 <- rbind(pred.s8, table(predict(qda_fit, newdata=test.i)$class))
+    }
+    
+    #write.csv(pred.s7, "pred.s7.csv")
+    #Session error rate for session index = 8
+    session_error_qda_s8 <- mean((unique(test.s8$subject)!=
+    colnames(pred.s8)[apply(pred.s8, 1, which.max)]))
+  
+    #Mean of the session error rate
+    error_pred_qda1[i] <- mean(c(session_error_qda_s7, session_error_qda_s8))
+  
+  }
+#Overall error rate for K-fold CV  
+mean_qda <- mean(error_pred_qda1)
+##0.421401
+
+```
+
+For QDA class variables where frequency of subject variable >30 have been eliminated. The plot above shows the frequency of each of the class values. This is done because the number of predictors are 29 in total. There were 3 methods created with vsa and k-fold cv. The error rate for VSA model is 84.31373%, which gives an accuracy of about 15.68627% while the 5-Fold CV model gave an error rate of 42.1401% which is not so good with accuracy of 57.8599%. So, Overall the 5-Fold CV method stands out among the three methods.
+
+### MclustDA
+
+```{r,message=F,warning=F,highlight=FALSE, echo=FALSE,include=FALSE, comment=NA, error=FALSE}
+##VSA
+set.seed(702)
+#Sample of 70% records are considerd to be split into train and test set.
+row <- sample(x=nrow(known_kk), size=.70*nrow(known_kk))
+#70% records are assigned to training
+known_kk_train <- known_kk[row, c(2,5:6,8:9,11:12,14:15,17:18,20:21,23:24,26:27,29:30,32:33,35:43)]
+#30% records are assigned to test with the sessionindex used for finding the performnace w.r.t session
+known_kk_test <- known_kk[-row, c(2:3,5:6,8:9,11:12,14:15,17:18,20:21,23:24,26:27,29:30,32:33,35:43)]
+#train MclustDA with training set
+known_kk_mod <- MclustDA(known_kk_train[,-1], known_kk_train[,1], G = 1)
+
+pred.s7 <- NULL
+#Out of the 30% of test set is divided into 2 sets based on sessionIndex
+#sessionIndex = 7 
+test.s7 <- known_kk_test[known_kk_test$sessionIndex==7,-2]
+#sessionIndex = 7 
+test.s8 <- known_kk_test[known_kk_test$sessionIndex==8,-2]
+
+for (i in unique(test.s7$subject)){
+test.i <- new.data <- test.s7[test.s7$subject==i, -1]
+pred.s7 <- rbind(pred.s7, table(predict(known_kk_mod, newdata=test.i)$class))
+}
+
+#write.csv(pred.s7, "pred.s7.csv")
+#Test Error rate for mclust for sessionindex=7
+session_error_mclust_s7 <- mean((unique(test.s7$subject)!=
+colnames(pred.s7)[apply(pred.s7, 1, which.max)]))
+mclust_s7 <- session_error_mclust_s7
+
+#0.1904762
+#Modfied from Dr. Saunder's post
+pred.s8 <- NULL
+
+for (i in unique(test.s8$subject)){
+test.i <- new.data <- test.s8[test.s8$subject==i, -1]
+pred.s8 <- rbind(pred.s8, table(predict(known_kk_mod, newdata=test.i)$class))
+}
+
+#write.csv(pred.s7, "pred.s7.csv")
+#Test Error rate for mclust for sessionindex=8
+session_error_mclust_s8 <- mean((unique(test.s8$subject)!=
+colnames(pred.s7)[apply(pred.s8, 1, which.max)]))
+mclust_s8 <- session_error_mclust_s8
+##0.1568627
+
+#Overall Test Error rate for mclust
+Average_session_error_mclust <- mean(c(session_error_mclust_s7, session_error_mclust_s8))
+##0.1736695
+
+
+##5-Fold CV
+#performing k-fold CV with k=5
+permut.n <- sample(1:1776,1776)
+#Folds have the rows divided into 5 equal parts
+folds <- cbind(sort(rep(seq(1,5,1), 355))[1:nrow(known_kk)], permut.n)
+
+error_pred_mc1 <- rep(0, 5)
+for (i in 1:5)
+{
+    index.i <- folds[folds[,1]==i, 2]
+    index.i <- index.i[!is.na(index.i)]
+    # Test set contains 1 fold of data
+    known_kk_test <- known_kk[index.i, c(2:3,5:6,8:9,11:12,14:15,17:18,20:21,23:24,26:27,29:30,32:33,35:43)]
+    # Remaining 4 folds data is alloted for the training set
+    known_kk_train <- known_kk[-index.i, c(2,5:6,8:9,11:12,14:15,17:18,20:21,23:24,26:27,29:30,32:33,35:43)]
+    #Training the dataset
+    mc_fit2 <- MclustDA(known_kk_train[, -1], known_kk_train[,1], G = 1)
+    
+    pred.s7 <- NULL
+    #split the 1 fold test set based on sessionIndex
+    #sessionIndex=7
+    test.s7 <- known_kk_test[known_kk_test$sessionIndex==7,-2]
+    #sessionIndex=8
+    test.s8 <- known_kk_test[known_kk_test$sessionIndex==8,-2]
+    
+    for (i in unique(test.s7$subject)){
+    test.i <- new.data <- test.s7[test.s7$subject==i, -1]
+    pred.s7 <- rbind(pred.s7, table(predict(mc_fit2, newdata=test.i)$class))
+    }
+    
+    #write.csv(pred.s7, "pred.s7.csv")
+    #Session error rate for sessionIndex =7
+    session_error_mclust_s7 <- mean((unique(test.s7$subject)!=
+    colnames(pred.s7)[apply(pred.s7, 1, which.max)]))
+    
+    pred.s8 <- NULL
+    
+    for (i in unique(test.s8$subject)){
+    test.i <- new.data <- test.s8[test.s8$subject==i, -1]
+    pred.s8 <- rbind(pred.s8, table(predict(mc_fit2, newdata=test.i)$class))
+    }
+    
+    #write.csv(pred.s7, "pred.s7.csv")
+    #Session error rate for sessionIndex =8
+    session_error_mclust_s8 <- mean((unique(test.s8$subject)!=
+    colnames(pred.s8)[apply(pred.s8, 1, which.max)]))
+  
+    error_pred_mc1[i] <- mean(c(session_error_mclust_s7, session_error_mclust_s8))
+}
+mc1_pred_error <- error_pred_mc1
+overall_mclust <- mean(error_pred_mc1)
+#18.58213
+
+
+```
+
+The error rate for VSA model is 17.36695%, which gives an accuracy of about 82.63305% and thus shows a good performance. The 5-Fold model gave an error rate of 18.58213%, which is good with accuracy of 81.41787%. So, Overall the 5-Fold method stands out among the three methods.
+
+### MclustDA - EDDA
+
+```{r,message=F,warning=F,highlight=FALSE, echo=FALSE,include=FALSE, comment=NA, error=FALSE}
+set.seed(702)
+##VSA
+#Sample of 70% records are considerd to be split into train and test set.
+row <- sample(x=nrow(known_kk), size=.70*nrow(known_kk))
+#70% records are assigned to training
+known_kk_train <- known_kk[row, c(2,5:6,8:9,11:12,14:15,17:18,20:21,23:24,26:27,29:30,32:33,35:43)]
+#30% records are assigned to test with the sessionindex used for finding the performnace w.r.t session
+known_kk_test <- known_kk[-row, c(2:3,5:6,8:9,11:12,14:15,17:18,20:21,23:24,26:27,29:30,32:33,35:43)]
+#train MclustDA with training set
+known_kk_mod <- MclustDA(known_kk_train[,-1], known_kk_train[,1], G = 1, modelType = "EDDA")
+
+pred.s7 <- NULL
+#Out of the 30% of test set is divided into 2 sets based on sessionIndex
+#sessionIndex = 7 
+test.s7 <- known_kk_test[known_kk_test$sessionIndex==7,-2]
+#sessionIndex = 7 
+test.s8 <- known_kk_test[known_kk_test$sessionIndex==8,-2]
+
+for (i in unique(test.s7$subject)){
+test.i <- new.data <- test.s7[test.s7$subject==i, -1]
+pred.s7 <- rbind(pred.s7, table(predict(known_kk_mod, newdata=test.i)$class))
+}
+
+#write.csv(pred.s7, "pred.s7.csv")
+#Session error rate for sessionIndex =7
+session_error_mclust_s7 <- mean((unique(test.s7$subject)!=
+colnames(pred.s7)[apply(pred.s7, 1, which.max)]))
+mclust2_s7 <- session_error_mclust_s7
+
+#0.1904762
+#Modfied from Dr. Saunder's post
+pred.s8 <- NULL
+
+for (i in unique(test.s8$subject)){
+test.i <- new.data <- test.s8[test.s8$subject==i, -1]
+pred.s8 <- rbind(pred.s8, table(predict(known_kk_mod, newdata=test.i)$class))
+}
+
+#write.csv(pred.s7, "pred.s7.csv")
+#Session error rate for sessionIndex =8
+session_error_mclust_s8 <- mean((unique(test.s8$subject)!=
+colnames(pred.s7)[apply(pred.s8, 1, which.max)]))
+mclust2_s8 <- session_error_mclust_s8
+##0.1568627
+
+
+Average_session_error_mclust2 <- mean(c(session_error_mclust_s7, session_error_mclust_s8))
+##2.941176
+
+##5-Fold CV
+
+permut.n <- sample(1:1776,1776)
+#Dividing into 5 folds with almost equal set of records
+folds <- cbind(sort(rep(seq(1,5,1), 355))[1:nrow(known_kk)], permut.n)
+
+error_pred_mc1 <- rep(0, 5)
+for (i in 1:5)
+{
+    index.i <- folds[folds[,1]==i, 2]
+    index.i <- index.i[!is.na(index.i)]
+    #Test set contains the data of 1 fold
+    known_kk_test <- known_kk[index.i, c(2:3,5:6,8:9,11:12,14:15,17:18,20:21,23:24,26:27,29:30,32:33,35:43)]
+    #Train set is composed of other 4 folds
+    known_kk_train <- known_kk[-index.i, c(2,5:6,8:9,11:12,14:15,17:18,20:21,23:24,26:27,29:30,32:33,35:43)]
+    mc_fit2 <- MclustDA(known_kk_train[, -1], known_kk_train[,1], G = 1, modelType = "EDDA")
+    
+    pred.s7 <- NULL
+    
+      #Out of the 30% of test set is divided into 2 sets based on sessionIndex
+      #sessionIndex = 7 
+      test.s7 <- known_kk_test[known_kk_test$sessionIndex==7,-2]
+      #sessionIndex = 7 
+      test.s8 <- known_kk_test[known_kk_test$sessionIndex==8,-2]
+    
+    for (i in unique(test.s7$subject)){
+    test.i <- new.data <- test.s7[test.s7$subject==i, -1]
+    pred.s7 <- rbind(pred.s7, table(predict(mc_fit2, newdata=test.i)$class))
+    }
+    
+    #write.csv(pred.s7, "pred.s7.csv")
+    
+    session_error_mclust_s7 <- mean((unique(test.s7$subject)!=
+    colnames(pred.s7)[apply(pred.s7, 1, which.max)]))
+    
+    pred.s8 <- NULL
+    
+    for (i in unique(test.s8$subject)){
+    test.i <- new.data <- test.s8[test.s8$subject==i, -1]
+    pred.s8 <- rbind(pred.s8, table(predict(mc_fit2, newdata=test.i)$class))
+    }
+    
+    #write.csv(pred.s7, "pred.s7.csv")
+    
+    session_error_mclust_s8 <- mean((unique(test.s8$subject)!=
+    colnames(pred.s8)[apply(pred.s8, 1, which.max)]))
+  
+    error_pred_mc1[i] <- mean(c(session_error_mclust_s7, session_error_mclust_s8))
+}
+pred_error <- error_pred_mc1
+mclust2_overall <- mean(error_pred_mc1)
+#2.976651
+```
+
+The error rate for VSA model is 2.941176%, which gives an accuracy of about 97.05882% and thus shows a very good performance. The 5-Fold model gave an error rate of 2.976651%, which is also very good with accuracy of 97.02335% but slightly less than the VSA model above. So, overall the VSA method stands out among the three methods. For the following models we will add in the log transformation for the models LDA, SVM and Naive Bayes, which made the accuracy better.
+
+### LDA
+
+```{r echo=FALSE,warning=F,message=F}
+set.seed(706)
+
+# data partition
+rows <- sample(x=nrow(known_aj), size=.70 *nrow(known_aj))
+trainData <- known_aj[rows,-1]
+trainClass <- known_aj$subject[rows]
+testData <- known_aj[-rows,-1]
+testClass <- known_aj$subject[-rows]
+
+# fit model
+known_aj.lda.vsa <- lda(trainClass ~., data = trainData)
+
+# Compute the confusion matrix
+known_aj.lda.vsa.pred <- predict(known_aj.lda.vsa, newdata=testData)
+known_aj.lda.vsa.con.matrix <- table(testClass, known_aj.lda.vsa.pred$class)
+
+# Test error rate
+known_aj.lda.vsa.testerror <- 1- sum(diag(known_aj.lda.vsa.con.matrix)) / sum(known_aj.lda.vsa.con.matrix)
+```
+
+
+```{r echo=FALSE,warning=F,message=F}
+set.seed(707)
+
+# Create 5 equally sized folds
+k = 5 # number of folds
+fold_size <-nrow(known_aj)/k
+indices <- rep(1:k,rep(fold_size,k))
+id <- sample(indices, replace = FALSE) 
+
+# list to store errors of each fold
+error.lda.kfold <- c()
+for(i in 1:k){
+    trainData <- known_aj[id != i,-1]
+    trainClass <- known_aj$subject[id != i]
+    testData <- known_aj[id == i,-1]
+    testClass <- known_aj$subject[id == i]
+    
+    # fit model
+    lda.kfold <- lda(trainClass ~., data = trainData)
+    # predict
+    pred.lda.kfold <- predict(lda.kfold,testData)
+    con.matrix.lda.kfold <- table(testClass, pred.lda.kfold$class)
+    
+    testerror.lda.kfold <- 1- sum(diag(con.matrix.lda.kfold)) / sum(con.matrix.lda.kfold)
+    error.lda.kfold[i] <- testerror.lda.kfold
+}
+known_aj.lda.kfold.testerror = mean(error.lda.kfold)
+```
+
+The LDA model was completed with the VSA and 5-fold CV approach. The test error with VSA is .087 and with 5 fold CV is .088. We can say here that LDA performs a little better with VSA in this scenario. 
+
+### SVM
+
+```{r echo=FALSE,warning=F,message=F}
+set.seed(708) 
+
+# Data partition
+trainData <- known_aj[rows,-1]
+trainClass <- known_aj$subject[rows]
+testData <- known_aj[-rows,-1]
+testClass <- known_aj$subject[-rows]
+
+# VSA for SVM
+known_aj.svm = svm(trainClass~.,data=trainData,kernel="linear" ,ranges=list(cost=c(.01,.02,.05,.1,.2,.5,1,2,5,10))) 
+
+# predict and create confusion matrix
+known_aj.svm.test.pred = predict(known_aj.svm,newdata=testData)
+known_aj.svm.test.con.matrix <- table(testClass,known_aj.svm.test.pred)
+
+# Calculate test error
+known_aj.svm.test.error <- 1- sum(diag(known_aj.svm.test.con.matrix)) / sum(known_aj.svm.test.con.matrix) 
+```
+
+
+```{r echo=FALSE,warning=F,message=F}
+set.seed(709)
+
+# Create 5 equally sized folds
+k = 5 # number of folds
+fold_size <-nrow(known_aj)/k
+indices <- rep(1:k,rep(fold_size,k))
+id <- sample(indices, replace = FALSE)  
+
+# list to store errors of each fold
+error.svm.kfold <- c()
+for(i in 1:k){
+    trainData <- known_aj[id != i,-1]
+    trainClass <- known_aj$subject[id != i]
+    testData <- known_aj[id == i,-1]
+    testClass <- known_aj$subject[id == i]
+    
+    # fit model
+    svm.kfold <- svm(trainClass~.,data=trainData,kernel="linear" ,ranges=list(cost=c(.01,.02,.05,.1,.2,.5,1,2,5,10)))
+    
+    # predict and confusion matrix
+    pred.svm.kfold <- predict(svm.kfold,newdata=testData) 
+    con.matrix.svm.kfold <- table(testClass,pred.svm.kfold) 
+    
+    testerror.svm.kfold <- 1- sum(diag(con.matrix.svm.kfold)) / sum(con.matrix.svm.kfold)
+    error.svm.kfold[i] <- testerror.svm.kfold
+}
+known_aj.svm.kfold.testerror = mean(error.svm.kfold)
+```
+
+For the SVM model the test error with VSA is .09 and with 5 fold CV is .10. We can say here that SVM is also performing a little better with VSA. The kernel used for this Model is `Linear` and the different cost values used are: .01,.02,.05,.1,.2,.5,1,2,5,10.
+
+### Neural Network
+
+```{r include=FALSE,warning=F,message=F}
+set.seed(710)
+
+# Data partition
+rows <- sample(x=nrow(known_aj), size=.70 *nrow(known_aj))
+trainData <- known_aj[rows,c(-1,-2)]
+trainClass <- known_aj$subject[rows]
+testData <- known_aj[-rows,c(-1,-2)]
+testClass <- known_aj$subject[-rows]
+
+known_aj.nn = nnet(trainClass ~.,trainData, size=10)
+
+# predict and create confusion matrix
+known_aj.nn.pred <- predict(known_aj.nn, testData, type="class")
+known_aj.nn.test.con.matrix <- table(known_aj.nn.pred,testClass)
+known_aj.nn.test.error <- 1- sum(diag(known_aj.nn.test.con.matrix)) / sum(known_aj.nn.test.con.matrix)
+```
+
+
+```{r include=FALSE,warning=F,message=F}
+set.seed(711)
+
+# Create 5 equally sized folds
+k = 5 # number of folds
+fold_size <-nrow(known_aj)/k
+indices <- rep(1:k,rep(fold_size,k))
+id <- sample(indices, replace = FALSE) 
+
+# list to store errors of each fold
+error.nn.bayes.kfold <- c()
+for(i in 1:k){
+    # Data partition
+    trainData <- known_aj[id != i,c(-1,-2)]
+    trainClass <- known_aj$subject[id != i]
+    testData <- known_aj[id == i,c(-1,-2)]
+    testClass <- known_aj$subject[id == i]
+    
+    # fit model
+    known_aj.nn = nnet(trainClass ~.,trainData, size=10)
+    known_aj.nn.pred <- predict(known_aj.nn, testData, type="class")
+    con.matrix.nn.kfold <- table(testClass,known_aj.nn.pred) 
+    
+    testerror.nn.kfold <- 1- sum(diag(con.matrix.nn.kfold)) / sum(con.matrix.nn.kfold)
+    error.nn.bayes.kfold[i] <- testerror.nn.kfold
+}
+known_aj.nn.kfold.testerror = mean(error.nn.bayes.kfold)
+```
+
+Next was a neural network algorithm because it is a classification problem and an advanced algorithm as compared to logistic regression. The test error with VSA is .36 and with 5 fold CV is .91. The neural network performs better with VSA in this scenario comparatively. Although in both the approaches it is not giving us satisfactory error rates. The size used in the model = 10.
+
+### Naive Bayes
+
+```{r, include=FALSE,warning=F,message=F} 
+set.seed(712) 
+# Data partition
+rows <- sample(x=nrow(known_aj), size=.70 *nrow(known_aj))
+trainData <- known_aj[rows,-1]
+trainClass <- known_aj$subject[rows]
+testData <- known_aj[-rows,-1]
+testClass <- known_aj$subject[-rows]
+
+known_aj.naive.bayes <- naiveBayes(trainClass ~., data=trainData)
+
+known_aj.naive.bayes.pred <- predict(known_aj.naive.bayes,testData)
+
+#Confusion matrix to check accuracy
+known_aj.naive.bayes.test.con.matrix <- table(known_aj.naive.bayes.pred,testClass)
+known_aj.naive.bayes.test.error <- 1- sum(diag(known_aj.naive.bayes.test.con.matrix)) / sum(known_aj.naive.bayes.test.con.matrix)
+```
+
+
+```{r, include=FALSE,warning=F,message=F}
+set.seed(713)
+
+# Create 5 equally sized folds
+k = 5 # number of folds
+fold_size <-nrow(known_aj)/k
+indices <- rep(1:k,rep(fold_size,k))
+id <- sample(indices, replace = FALSE)  
+
+# list to store errors of each fold
+error.naive.bayes.kfold <- c()
+for(i in 1:k){  
+    trainData <- known_aj[id != i,-1]
+    trainClass <- known_aj$subject[id != i]
+    testData <- known_aj[id == i,-1]
+    testClass <- known_aj$subject[id == i]
+    
+    # fit model
+    known_aj.naive.bayes.kfold <- naiveBayes(trainClass ~., data=trainData)
+    # predict
+    pred.naive.bayes.kfold <- predict(known_aj.naive.bayes.kfold,newdata=testData) 
+    con.matrix.naive.bayes.kfold <- table(testClass,pred.naive.bayes.kfold) 
+    
+    testerror.naive.bayes.kfold <- 1- sum(diag(con.matrix.naive.bayes.kfold)) / sum(con.matrix.naive.bayes.kfold)
+    error.naive.bayes.kfold[i] <- testerror.naive.bayes.kfold
+}
+known_aj.naive.bayes.kfold.testerror = mean(error.naive.bayes.kfold)
+```
+
+Naive Bayes model, that I learned in Dr. Jun Liu's class at DSU, was also used. The test error with VSA is .142 and with 5-fold CV is .14. We can say here that Naive Bayes performs a little better with the CV approach here.
+
+### Linear Regression
+There are no linear regression models for these datasets. This is because the nature of the dataset does not call in the need for a linear regression. It isn't appropriate due to the fact that a categorical response is needed, not a linear or numerical response.
+
+### Logistic Regression
+Instead a logistic regression approach was used. The test error for VSA is .1012 which gives an accuracy of 89.88% while the 5-fold CV returned .1043 (89.57% accuracy). 
+
+```{r, message=F, warning=F, highlight=FALSE, echo=FALSE, comment=NA, error=FALSE, include=FALSE}
+set.seed(702)
+train_js <- sample(x=nrow(known_js), size=.70*nrow(known_js))
+
+#Training dataset
+known_train_js <- known_js[train_js,]
+head(known_train_js)
+
+#Testing dataset
+known_test_js <- known_js[-train_js,]
+head(known_test_js)
+
+#Professor Saunders - getting session Index and subject
+t(xtabs(~sessionIndex+subject, data=known_js))
+
+#Professor Saunders - creating session 8 training data
+train8_js <- known_js[known_js$sessionIndex==8,]
+
+head(train8_js)
+colnames(train8_js)
+
+#Professor saunders - creating session 7 test data
+test7_js <- known_js[known_js$sessionIndex==7,]
+
+colnames(test7_js)
+
+#- - VSA model 1
+set.seed(702)
+#vsa
+#code obtained for looking at multinomial datasets
+#https://www.analyticsvidhya.com/blog/2016/02/multinomial-ordinal-logistic-regression/
+#https://www.princeton.edu/~otorres/LogitR101.pdf
+
+
+known_train_js_log <- known_train_js
+
+table(known_train_js_log$subject)
+
+log.test1_js <- multinom(subject ~ H.period + DD.period.t + H.t + DD.t.i + H.i + DD.i.e + H.e + DD.e.five + H.five + DD.five.Shift.r + H.Shift.r + DD.Shift.r.o + H.o + DD.o.a + H.a + DD.a.n + H.n + DD.n.l + H.l + H.Return + DD.l.Return + squared_H.period + squared_DD.i.e + exp_H.five + squared_DD.l.Return + interaction.H.period.o + interaction.H.e.t + interaction.H.i.o + interaction.H.shiftr.t, data = known_train_js_log, MaxNWts = 2000)
+
+#code and examples for finding the 'important' variables
+#http://amunategui.github.io/multinomial-neuralnetworks-walkthrough/
+important_js <- varImp(log.test1_js)
+important_js$variables <- row.names(important_js)
+important_js <- important_js[order(-important_js$Overall),]
+
+print(head(important_js))
+
+#Following code is used primarily from the Professor Saunders final video
+pred.s7_js=NULL
+
+test_js <- known_js[-train_js,-3]
+
+test.s7_js <- known_js[known_js$sessionIndex==7,-2]
+test.s8_js <- known_js[known_js$sessionIndex==8,-2]
+
+for (i in unique(test.s7_js$subject)){
+test.i=new.data=test.s7_js[test.s7_js$subject==i,-1]
+pred.s7_js=rbind(pred.s7_js,
+table(predict(log.test1_js, newdata=test.i, type="class")))
+}
+
+rownames(pred.s7_js)=paste(unique(test.s7_js$subject))
+print(pred.s7_js)
+
+pred.s8_js=NULL
+
+for (i in unique(test.s8_js$subject)){
+test.i=new.data=test.s8_js[test.s8_js$subject==i,-1]
+pred.s8_js=rbind(pred.s8_js,
+table(predict(log.test1_js, newdata=test.i, type="class")))
+}
+
+rownames(pred.s8_js)=paste(unique(test.s8_js$subject))
+print(pred.s8_js)
+
+s7error_log1_js <- mean((unique(test.s7_js$subject)==
+colnames(pred.s7_js)[apply(pred.s7_js, 1, which.max)]))
+
+s8error_log1_js <- mean((unique(test.s8_js$subject)==
+colnames(pred.s8_js)[apply(pred.s8_js, 1, which.max)]))
+
+average_log1_js <- mean(c(s7error_log1_js, s8error_log1_js))
+
+#- - VSA model 2
+log.test2_js <- multinom(subject ~ poly(H.period + DD.period.t + H.t + DD.t.i + H.i + DD.i.e + H.e + DD.e.five + H.five + DD.five.Shift.r + H.Shift.r + DD.Shift.r.o + H.o + DD.o.a + H.a + DD.a.n + H.n + DD.n.l + H.l + H.Return + DD.l.Return + squared_H.period + squared_DD.i.e + exp_H.five + squared_DD.l.Return + interaction.H.period.o + interaction.H.e.t + interaction.H.i.o + interaction.H.shiftr.t, 2), data = known_train_js_log, MaxNWts = 2000)
+
+important2_js <- varImp(log.test2_js)
+important2_js$variables <- row.names(important2_js)
+important2_js <- important_js[order(-important2_js$Overall),]
+
+print(head(important2_js))
+
+#Following code is used primarily from the Professor Saunders final video
+pred.s7_js=NULL
+
+test_js <- known_js[-train_js,-3]
+
+test.s7_js <- known_js[known_js$sessionIndex==7,-2]
+test.s8_js <- known_js[known_js$sessionIndex==8,-2]
+
+for (i in unique(test.s7_js$subject)){
+test.i=new.data=test.s7_js[test.s7_js$subject==i,-1]
+pred.s7_js=rbind(pred.s7_js,
+table(predict(log.test2_js, newdata=test.i, type="class")))
+}
+
+rownames(pred.s7_js)=paste(unique(test.s7_js$subject))
+print(pred.s7_js)
+
+pred.s8_js=NULL
+
+for (i in unique(test.s8_js$subject)){
+test.i=new.data=test.s8_js[test.s8_js$subject==i,-1]
+pred.s8_js=rbind(pred.s8_js,
+table(predict(log.test2_js, newdata=test.i, type="class")))
+}
+
+rownames(pred.s8_js)=paste(unique(test.s8_js$subject))
+print(pred.s8_js)
+
+s7error_log2_js <- mean((unique(test.s7_js$subject)==
+colnames(pred.s7_js)[apply(pred.s7_js, 1, which.max)]))
+
+s8error_log2_js <- mean((unique(test.s8_js$subject)==
+colnames(pred.s8_js)[apply(pred.s8_js, 1, which.max)]))
+
+average_log2_js <- mean(c(s7error_log2_js, s8error_log2_js))
+
+# - - VSA model 3
+log.test3_js <- multinom(subject ~ poly(H.period + DD.period.t + H.t + DD.t.i + H.i + DD.i.e + H.e + DD.e.five + H.five + DD.five.Shift.r + H.Shift.r + DD.Shift.r.o + H.o + DD.o.a + H.a + DD.a.n + H.n + DD.n.l + H.l + H.Return + DD.l.Return + squared_H.period + squared_DD.i.e + exp_H.five + squared_DD.l.Return + interaction.H.period.o + interaction.H.e.t + interaction.H.i.o + interaction.H.shiftr.t, 3), data = known_train_js_log, MaxNWts = 2000)
+
+important3_js <- varImp(log.test3_js)
+important3_js$variables <- row.names(important3_js)
+important3_js <- important_js[order(-important3_js$Overall),]
+
+print(head(important3_js))
+
+#Following code is used primarily from the Professor Saunders final video
+pred.s7_js=NULL
+
+test_js <- known_js[-train_js,-3]
+
+test.s7_js <- known_js[known_js$sessionIndex==7,-2]
+test.s8_js <- known_js[known_js$sessionIndex==8,-2]
+
+for (i in unique(test.s7_js$subject)){
+test.i=new.data=test.s7_js[test.s7_js$subject==i,-1]
+pred.s7_js=rbind(pred.s7_js,
+table(predict(log.test3_js, newdata=test.i, type="class")))
+}
+
+rownames(pred.s7_js)=paste(unique(test.s7_js$subject))
+print(pred.s7_js)
+
+pred.s8_js=NULL
+
+for (i in unique(test.s8_js$subject)){
+test.i=new.data=test.s8_js[test.s8_js$subject==i,-1]
+pred.s8_js=rbind(pred.s8_js,
+table(predict(log.test3_js, newdata=test.i, type="class")))
+}
+
+rownames(pred.s8_js)=paste(unique(test.s8_js$subject))
+print(pred.s8_js)
+
+s7error_log3_js <- mean((unique(test.s7_js$subject)==
+colnames(pred.s7_js)[apply(pred.s7_js, 1, which.max)]))
+
+s8error_log3_js <- mean((unique(test.s8_js$subject)==
+colnames(pred.s8_js)[apply(pred.s8_js, 1, which.max)]))
+
+average_log3_js <- mean(c(s7error_log3_js, s8error_log3_js))
+
+#5fold CV
+set.seed(702)
+
+#Kfold example found here
+#https://stackoverflow.com/questions/39550118/cross-validation-function-for-logistic-regression-in-r
+train_control_js <- trainControl(method = "cv", number = 5)
+
+kfold_js <- train(subject ~ poly(H.period + DD.period.t + H.t + DD.t.i + H.i + DD.i.e + H.e + DD.e.five + H.five + DD.five.Shift.r + H.Shift.r + DD.Shift.r.o + H.o + DD.o.a + H.a + DD.a.n + H.n + DD.n.l + H.l + H.Return + DD.l.Return + squared_H.period + squared_DD.i.e + exp_H.five + squared_DD.l.Return + interaction.H.period.o + interaction.H.e.t + interaction.H.i.o + interaction.H.shiftr.t, 2), data = known_train_js_log, trControl = train_control_js, method = "multinom", MaxNWts = 2000)
+
+#Following code is used primarily from the Professor Saunders final video
+pred.s7_js=NULL
+
+test_js <- known_js[-train_js,-3]
+
+test.s7_js <- known_js[known_js$sessionIndex==7,-2]
+test.s8_js <- known_js[known_js$sessionIndex==8,-2]
+
+for (i in unique(test.s7_js$subject)){
+test.i=new.data=test.s7_js[test.s7_js$subject==i,-1]
+pred.s7_js=rbind(pred.s7_js,
+table(predict(kfold_js, newdata=test.i)))
+}
+
+rownames(pred.s7_js)=paste(unique(test.s7_js$subject))
+print(pred.s7_js)
+
+pred.s8_js=NULL
+
+for (i in unique(test.s8_js$subject)){
+test.i=new.data=test.s8_js[test.s8_js$subject==i,-1]
+pred.s8_js=rbind(pred.s8_js,
+table(predict(kfold_js, newdata=test.i)))
+}
+
+rownames(pred.s8_js)=paste(unique(test.s8_js$subject))
+print(pred.s8_js)
+
+s7error_kfold_js <- mean((unique(test.s7_js$subject)==
+colnames(pred.s7_js)[apply(pred.s7_js, 1, which.max)]))
+
+s8error_kfold_js <- mean((unique(test.s8_js$subject)==
+colnames(pred.s8_js)[apply(pred.s8_js, 1, which.max)]))
+
+average_kfold_js <- mean(c(s7error_kfold_js, s8error_kfold_js))
+```
+
+### Log Transformation Logistic Regression
+The best VSA logistic regression model and logistic regression k-fold cross validation were also done on classifiers that were modified. These modifications included a log transformation as mentioned above. The test error for VSA is .0098, which gives an accuracy of 99% while the 5- fold CV returned again returned .0325, which gives 96.75% accuracy. This shows that performing a log transformation on our variables does in fact produce a better model, and thus result.
+
+```{r, message=F, warning=F, highlight=FALSE, echo=FALSE, comment=NA, error=FALSE, include = FALSE}
+set.seed(702)
+# log transformations suggested and used from aj
+known_trans_js <- known_js
+known_trans_js$DD.period.t<-log(known_js$DD.period.t)
+known_trans_js$DD.t.i<-log(known_js$DD.t.i)
+known_trans_js$DD.i.e<-log(known_js$DD.i.e)
+known_trans_js$DD.e.five<-log(known_js$DD.e.five)
+known_trans_js$DD.Shift.r.o<-log(known_js$DD.Shift.r.o)
+known_trans_js$DD.o.a<-log(known_js$DD.o.a)
+known_trans_js$DD.l.Return<-log(known_js$DD.l.Return)
+known_trans_js$H.a<-log(known_js$H.a)
+known_trans_js$H.l<-log(known_js$H.l)
+known_trans_js$DD.five.Shift.r<-log(known_js$DD.five.Shift.r)
+known_trans_js$DD.n.l<-log(known_js$DD.n.l)
+str(known_trans_js)
+
+#VSA Transformation
+log.trans.test_js <- multinom(subject ~ H.period + DD.period.t + H.t + DD.t.i + H.i + DD.i.e + H.e + DD.e.five + H.five + DD.five.Shift.r + H.Shift.r + DD.Shift.r.o + H.o + DD.o.a + H.a + DD.a.n + H.n + DD.n.l + H.l + H.Return + DD.l.Return + squared_H.period + squared_DD.i.e + exp_H.five + squared_DD.l.Return + interaction.H.period.o + interaction.H.e.t + interaction.H.i.o + interaction.H.shiftr.t, data = known_trans_js, MaxNWts = 2000)
+
+#code and examples for finding the 'important' variables
+#http://amunategui.github.io/multinomial-neuralnetworks-walkthrough/
+important_js <- varImp(log.trans.test_js)
+important_js$variables <- row.names(important_js)
+important_js <- important_js[order(-important_js$Overall),]
+
+print(head(important_js))
+
+#Following code is used primarily from the Professor Saunders final video
+pred.s7_js=NULL
+
+test_js <- known_js[-train_js,-3]
+
+test.s7_js <- known_js[known_js$sessionIndex==7,-2]
+test.s8_js <- known_js[known_js$sessionIndex==8,-2]
+
+for (i in unique(test.s7_js$subject)){
+test.i=new.data=test.s7_js[test.s7_js$subject==i,-1]
+pred.s7_js=rbind(pred.s7_js,
+table(predict(log.trans.test_js, newdata=test.i, type="class")))
+}
+
+rownames(pred.s7_js)=paste(unique(test.s7_js$subject))
+print(pred.s7_js)
+
+pred.s8_js=NULL
+
+for (i in unique(test.s8_js$subject)){
+test.i=new.data=test.s8_js[test.s8_js$subject==i,-1]
+pred.s8_js=rbind(pred.s8_js,
+table(predict(log.trans.test_js, newdata=test.i, type="class")))
+}
+
+rownames(pred.s8_js)=paste(unique(test.s8_js$subject))
+print(pred.s8_js)
+
+s7error_log.trans_js <- mean((unique(test.s7_js$subject)==
+colnames(pred.s7_js)[apply(pred.s7_js, 1, which.max)]))
+
+s8error_log.trans_js <- mean((unique(test.s8_js$subject)==
+colnames(pred.s8_js)[apply(pred.s8_js, 1, which.max)]))
+
+average_log.trans_js <- mean(c(s7error_log.trans_js, s8error_log.trans_js))
+
+
+#K-fold Cross Validation
+#k-fold (k=5)
+set.seed(702)
+
+#Kfold example found here
+#https://stackoverflow.com/questions/39550118/cross-validation-function-for-logistic-regression-in-r
+train_control_js <- trainControl(method = "cv", number = 5)
+
+kfold_trans_js <- train(subject ~ poly(H.period + DD.period.t + H.t + DD.t.i + H.i + DD.i.e + H.e + DD.e.five + H.five + DD.five.Shift.r + H.Shift.r + DD.Shift.r.o + H.o + DD.o.a + H.a + DD.a.n + H.n + DD.n.l + H.l + H.Return + DD.l.Return + squared_H.period + squared_DD.i.e + exp_H.five + squared_DD.l.Return + interaction.H.period.o + interaction.H.e.t + interaction.H.i.o + interaction.H.shiftr.t, 3), data = known_trans_js, trControl = train_control_js, method = "multinom", MaxNWts = 2000)
+
+#Following code is used primarily from the Professor Saunders final video
+pred.s7_js=NULL
+
+test_js <- known_js[-train_js,-3]
+
+test.s7_js <- known_js[known_js$sessionIndex==7,-2]
+test.s8_js <- known_js[known_js$sessionIndex==8,-2]
+
+for (i in unique(test.s7_js$subject)){
+test.i=new.data=test.s7_js[test.s7_js$subject==i,-1]
+pred.s7_js=rbind(pred.s7_js,
+table(predict(kfold_trans_js, newdata=test.i)))
+}
+
+rownames(pred.s7_js)=paste(unique(test.s7_js$subject))
+print(pred.s7_js)
+
+pred.s8_js=NULL
+
+for (i in unique(test.s8_js$subject)){
+test.i=new.data=test.s8_js[test.s8_js$subject==i,-1]
+pred.s8_js=rbind(pred.s8_js,
+table(predict(kfold_trans_js, newdata=test.i)))
+}
+
+rownames(pred.s8_js)=paste(unique(test.s8_js$subject))
+print(pred.s8_js)
+
+s7error_kfold_trans_js <- mean((unique(test.s7_js$subject)==
+colnames(pred.s7_js)[apply(pred.s7_js, 1, which.max)]))
+
+s8error_kfold_trans_js <- mean((unique(test.s8_js$subject)==
+colnames(pred.s8_js)[apply(pred.s8_js, 1, which.max)]))
+
+average_kfold_trans_js <- mean(c(s7error_kfold_trans_js, s8error_kfold_trans_js))
+
+#Logistic Regression Results
+s7error_log1_js
+s8error_log1_js
+average_log1_js
+
+s7error_log2_js
+s8error_log2_js
+average_log2_js
+
+s7error_log3_js
+s8error_log3_js
+average_log3_js
+
+s7error_log.trans_js
+s8error_log.trans_js
+average_log.trans_js
+
+s7error_kfold_js
+s8error_kfold_js
+average_kfold_js
+
+s7error_kfold_trans_js
+s8error_kfold_trans_js
+average_kfold_trans_js
+
+js.mul.vsa <- average_log3_js
+js.mul.vsa <- as.numeric(js.mul.vsa)
+js.mul.vsa
+
+js.mul.kfold <- average_kfold_js
+js.mul.kfold <- as.numeric(js.mul.kfold)
+js.mul.kfold
+
+js.mullog.vsa <- average_log.trans_js
+js.mullog.vsa <- as.numeric(js.mullog.vsa)
+js.mullog.vsa
+
+js.mullog.kfold <- average_kfold_trans_js
+js.mullog.kfold <- as.numeric(js.mullog.kfold)
+js.mullog.kfold
+```
+
+### KNN
+Our last model was K-Nearest Neighbor. The test error for VSA is .2901 and a 70.99% accuracy. While the 5-fold CV returned a much higher test error of .6711. 
+
+```{r, message=F, warning=F, highlight=FALSE, echo=FALSE, comment=NA, error=FALSE, include = FALSE}
+set.seed(702)
+#knn model specifics and further research was completed
+#sample code and references can be found at
+#http://dataaspirant.com/2017/01/09/knn-implementation-r-using-caret-package/
+
+str(known_train_js)
+anyNA(known_train_js)
+trctrl_js <- trainControl(method = "repeatedcv", number = 10, repeats = 5)
+#K = 5 had the highest accuracy rate with 81.58%. The next closest was k = 7 and an accuracy of 80.91%.
+
+
+#vsa
+#vsa 1
+knn_fit_js <- train(subject ~ poly(H.period + DD.period.t + H.t + DD.t.i + H.i + DD.i.e + H.e + DD.e.five + H.five + DD.five.Shift.r + H.Shift.r + DD.Shift.r.o + H.o + DD.o.a + H.a + DD.a.n + H.n + DD.n.l + H.l + H.Return + DD.l.Return + squared_H.period + squared_DD.i.e + exp_H.five + squared_DD.l.Return + interaction.H.period.o + interaction.H.e.t + interaction.H.i.o + interaction.H.shiftr.t, 3), data = known_train_js, method = "knn", trControl = trctrl_js, preProcess = c("center", "scale"), tuneLength = 10)
+
+knn_fit_js
+
+#Following code is used primarily from the Professor Saunders final video
+pred.s7_js=NULL
+
+test_js <- known_js[-train_js,-3]
+
+test.s7_js <- known_js[known_js$sessionIndex==7,-2]
+test.s8_js <- known_js[known_js$sessionIndex==8,-2]
+
+for (i in unique(test.s7_js$subject)){
+test.i=new.data=test.s7_js[test.s7_js$subject==i,-1]
+pred.s7_js=rbind(pred.s7_js,
+table(predict(knn_fit_js, newdata=test.i)))
+}
+
+rownames(pred.s7_js)=paste(unique(test.s7_js$subject))
+print(pred.s7_js)
+
+pred.s8_js=NULL
+
+for (i in unique(test.s8_js$subject)){
+test.i=new.data=test.s8_js[test.s8_js$subject==i,-1]
+pred.s8_js=rbind(pred.s8_js,
+table(predict(knn_fit_js, newdata=test.i)))
+}
+
+rownames(pred.s8_js)=paste(unique(test.s8_js$subject))
+print(pred.s8_js)
+
+s7error_knn_js <- mean((unique(test.s7_js$subject)==
+colnames(pred.s7_js)[apply(pred.s7_js, 1, which.max)]))
+
+s8error_knn_js <- mean((unique(test.s8_js$subject)==
+colnames(pred.s8_js)[apply(pred.s8_js, 1, which.max)]))
+
+average_knn_js <- mean(c(s7error_knn_js, s8error_knn_js))
+
+#- - KFold Cross Validation
+#k-fold (k=5)
+#k-fold reference can be found at
+#https://stats.stackexchange.com/questions/318968/knn-and-k-folding-in-r
+
+set.seed(702)
+knn_fit_kfold_js <- train(subject ~ poly(H.period + DD.period.t + H.t + DD.t.i + H.i + DD.i.e + H.e + DD.e.five + H.five + DD.five.Shift.r + H.Shift.r + DD.Shift.r.o + H.o + DD.o.a + H.a + DD.a.n + H.n + DD.n.l + H.l + H.Return + DD.l.Return + squared_H.period + squared_DD.i.e + exp_H.five + squared_DD.l.Return + interaction.H.period.o + interaction.H.e.t + interaction.H.i.o + interaction.H.shiftr.t, 3), data = known_train_js, method = "knn", trControl = trctrl_js, preProcess = c("center", "scale"), tuneLength = 10, metric = "Accuracy", tuneGrid = expand.grid(k = 1:5))
+
+knn_fit_kfold_js
+#all fold had accuracy under 10%
+
+#Following code is used primarily from the Professor Saunders final video
+pred.s7_js=NULL
+
+test_js <- known_js[-train_js,-3]
+
+test.s7_js <- known_js[known_js$sessionIndex==7,-2]
+test.s8_js <- known_js[known_js$sessionIndex==8,-2]
+
+for (i in unique(test.s7_js$subject)){
+test.i=new.data=test.s7_js[test.s7_js$subject==i,-1]
+pred.s7_js=rbind(pred.s7_js,
+table(predict(knn_fit_kfold_js, newdata=test.i)))
+}
+
+rownames(pred.s7_js)=paste(unique(test.s7_js$subject))
+print(pred.s7_js)
+
+pred.s8_js=NULL
+
+for (i in unique(test.s8_js$subject)){
+test.i=new.data=test.s8_js[test.s8_js$subject==i,-1]
+pred.s8_js=rbind(pred.s8_js,
+table(predict(knn_fit_kfold_js, newdata=test.i)))
+}
+
+rownames(pred.s8_js)=paste(unique(test.s8_js$subject))
+print(pred.s8_js)
+
+s7error_knnkfold_js <- mean((unique(test.s7_js$subject)==
+colnames(pred.s7_js)[apply(pred.s7_js, 1, which.max)]))
+
+s8error_knnkfold_js <- mean((unique(test.s8_js$subject)==
+colnames(pred.s8_js)[apply(pred.s8_js, 1, which.max)]))
+
+average_knnkfold_js <- mean(c(s7error_knnkfold_js, s8error_knnkfold_js))
+
+#KNN Results
+s7error_knn_js
+s8error_knn_js
+average_knn_js
+
+s7error_knnkfold_js
+s8error_knnkfold_js
+average_knnkfold_js
+
+js.knn.vsa <- average_knn_js
+js.knn.vsa <- as.numeric(js.knn.vsa)
+js.knn.kfold <- average_knnkfold_js
+js.knn.kfold <- as.numeric(js.knn.kfold)
+```
+
+### Unknown Dataset Prediction
+
+We made a final prediction on the random forest model and looked at how it was working on the unknown dataset. It appears that there are different sessionIndex's in there, which identify a session. The model predicted subjects for each and there was a mixture of results, some subjects were predicted multiple times.
+
+```{r, echo=FALSE, Include = FALSE, warning=FALSE, message=FALSE, fig.height=8}
+## We have Skewed distribution in unknown dataset as well for some variables for which I am doing log transformation below:
+#known_aj$UD.five.Shift.r<-log(known_aj$UD.five.Shift.r)
+Unknown_aj$DD.period.t<-log(Unknown_aj$DD.period.t)
+Unknown_aj$DD.t.i<-log(Unknown_aj$DD.t.i)
+Unknown_aj$DD.i.e<-log(Unknown_aj$DD.i.e)
+Unknown_aj$DD.e.five<-log(Unknown_aj$DD.e.five)
+Unknown_aj$DD.Shift.r.o<-log(Unknown_aj$DD.Shift.r.o)
+Unknown_aj$DD.o.a<-log(Unknown_aj$DD.o.a)
+Unknown_aj$DD.l.Return<-log(Unknown_aj$DD.l.Return)
+Unknown_aj$H.a<-log(Unknown_aj$H.a)
+# known_aj$H.l<-log(known_aj$H.l)
+Unknown_aj$UD.Shift.r.o<-log(Unknown_aj$UD.Shift.r.o)
+Unknown_aj$UD.five.Shift.r<-log(Unknown_aj$UD.five.Shift.r)
+Unknown_aj$UD.period.t<-log(Unknown_aj$UD.period.t)
+Unknown_aj$DD.five.Shift.r<-log(Unknown_aj$DD.five.Shift.r)
+Unknown_aj$UD.e.five <-log(Unknown_aj$UD.e.five)
+Unknown_aj$DD.n.l<-log(Unknown_aj$DD.n.l)
+
+## Doing Feature engineering on Unknown dataset as well:
+#unknown <- unknown_mm <- read.table("/Users/v-aajaim/Downloads/known.csv", head=TRUE, sep=",")
+
+#compilation purposes
+unknown <- unknown_mm
+
+#Take e^(x) as a transformation of H.five
+unknown$exp_H.five <- exp(unknown$H.five)
+
+#Add the transformation of squaring DD.i.e
+unknown$squared_DD.l.Return <- (unknown$DD.l.Return)^2
+unknown$squared_H.period <- (unknown$H.period)^2
+unknown$squared_dd.i.e <- (unknown$DD.i.e)^2
+unknown$squared_DD.i.e <- (unknown$DD.i.e)^2
+
+#Add the interaction between H.period and H.o
+unknown$interaction.H.period.o <- (unknown$H.period)*(unknown$H.o)
+
+
+#Add the interaction between H.e and H.t
+unknown$interaction.H.e.t <- (unknown$H.e)*(unknown$H.t)
+
+#Add the interaction between H.i and H.o
+unknown$interaction.H.i.o <- (unknown$H.i)*(unknown$H.o)
+
+#Add the interaction between H.e and H.t
+unknown$interaction.H.shiftr.t <- (unknown$H.Shift.r)*(unknown$H.t)
+
+col.remove <- c("rep","UD.period.t","UD.t.i","UD.i.e","UD.e.five","UD.five.Shift.r","UD.Shift.r.o","UD.o.a","UD.a.n","UD.n.l","UD.a.n","UD.n.l","UD.l.Return") 
+
+known_test_for_session <- unknown
+
+rf.known <- randomForest(subject~., data=known_mm_train, mtry=14, importance=TRUE)
+prediction.model<- rf.known
+
+df <- data.frame(matrix(ncol = 2, nrow = 0))
+x <- c("session.id", "Predicted Subject")
+colnames(df) <- x
+#Modified from Dr. Saunders example
+for(j in unique(known_test_for_session$session.id)){
+  test <- known_test_for_session[known_test_for_session$session.id==j,-1]  
+  pred=NULL
+  pred=rbind(pred, table(predict(prediction.model,newdata=test))) 
+  
+  max.col.name <- colnames(pred)[max.col(pred,ties.method="first")][1]
+  # cat("\n For session.id ",j," predicted subject is: ",max.col.name)
+  df <- rbind(df, data.frame("session.id"=j,"Predicted Subject"=max.col.name))
+}
+write.csv(df, "Unknown_Prediction_RF.csv")
+```
+
+
+### Results
+
+```{r echo=FALSE,warning=F,message=F}
+format_decimal <- function(x, k) trimws(format(round(x, k), nsmall=k))
+
+# print table for comparision 
+# Referencing these values from previous assignment
+table.output = matrix( c(
+                         "LDA",format_decimal(known_aj.lda.vsa.testerror,4),format_decimal(known_aj.lda.kfold.testerror,4),
+                         "SVM",format_decimal(known_aj.svm.test.error,4),format_decimal(known_aj.svm.kfold.testerror,4),
+                         "Neural Network",format_decimal(known_aj.nn.test.error,4),format_decimal(known_aj.nn.kfold.testerror,4),
+                         "Naive Bayes",format_decimal(known_aj.naive.bayes.test.error,4),format_decimal(known_aj.naive.bayes.kfold.testerror,4),
+                         "QDA",format_decimal(Average_session_error_rate_qda,4),format_decimal(mean_qda,4),
+                         "MclustDA",format_decimal(Average_session_error_mclust,4),format_decimal(overall_mclust,4),
+                         "MclustDA-EDDA",format_decimal(Average_session_error_mclust2,4),format_decimal(mclust2_overall,4),
+                         "Trees",format_decimal((1-Average_session_acc_rpart),4),format_decimal((1-error_kfold_session_rpart),4),
+                         "Bagging",format_decimal((1-Average_session_acc_bag),4),format_decimal((1-error_kfold_session_bag),4),
+                         "Random Forest",format_decimal((1-Average_session_acc_rf),4),format_decimal((1-error_kfold_session_rf),4),
+                         "Multinomial Regression",format_decimal(js.mul.vsa,4),format_decimal(js.mul.kfold,4),
+                         "Log Multinomial Regression",format_decimal(js.mullog.vsa,4),format_decimal(js.mullog.kfold,4),
+                         "KNN",format_decimal(js.knn.vsa,4),format_decimal(js.knn.kfold,4))
+                       , ncol=3,byrow = TRUE) 
+colnames(table.output) <- c("Method","VSA","5- Fold CV")
+kable(table.output, caption="Comparison table for Test Error", align = c("c", "r"))
+```
+
+We chose random forest as the final model after looking at the results table. This performed top, outperforming bagging by rep error since session error was so similar. After choosing this as the final model we ran more analysis on how this was predicting. The model was then trained only on session 8, then tested on session 7 which yielded an accuracy of 86%. Then the model was trained on a 70/30 split of the session 8 itself which yielded a 96% accuracy rate. So we are averaging a 94% accuracy rate across all training methods we have used. The 70/30 split, among both sessions, seemed to yield the best results since it had a representation with enough reps for all the users to be predicted correctly. This shows me the amount of reps per user is a factor in how it predicts.
+
+
+## References:
+
+*1. James, G., Witten, D., Hastie, T., & Tibshirani, R. (2017). An introduction to statistical learning: With applications in R. New York: Springer.*
+
+*2. https://stackoverflow.com/questions/35090883/remove-all-of-x-axis-labels-in-ggplot*
+
+*3. https://beckmw.wordpress.com/2013/02/05/collinearity-and-stepwise-vif-selection/ *
+
+*4. https://gist.github.com/ramhiser/6dec3067f087627a7a85 *
+
+*5. https://stackoverflow.com/questions/6578355/plotting-pca-biplot-with-ggplot2 *
+
+*6. Referenced from prevous homeworks from STAT 701 and 702*
+
+*7. Dr.Saunder's example code on LDA to find session Index error rate*
+
+
